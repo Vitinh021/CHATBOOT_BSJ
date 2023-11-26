@@ -1,0 +1,16 @@
+{
+  "name": "chatboot",
+  "version": "1.0.0",
+  "description": "chat para responder conversas de whatsapp",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "Edson Neto e Marcos Victor",
+  "license": "ISC",
+  "dependencies": {
+    "@wppconnect-team/wppconnect": "^1.28.3",
+    "express": "^4.18.2"
+  }
+}
