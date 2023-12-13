@@ -1,6 +1,5 @@
 const express = require('express');
 const utils = require('./utils.js');
-const connection = require('../infra/connection.js');
 
 //COMO FAZER A CONSULTA NO BANCO
 //connection.query('SELECT * FROM usuarios', (error, results) => {
