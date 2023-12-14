@@ -1,5 +1,3 @@
-//varivael de estado
-//enumerador com os estados
 
 const EnumStatus = {
     MENSAGEM_DATA: 1,
@@ -7,44 +5,51 @@ const EnumStatus = {
     BUSCAR: 3
   };
 
-
 function start(client) {
     var status = EnumStatus.MENSAGEM_DATA
     let dataEscolhida = null
     let horarioEscolhido = null
     client.onMessage((message) => {
+
         let opcaoNumero = parseInt(message.body)
-        if (status == EnumStatus.MENSAGEM_DATA) {//message.body == 'abc'
+
+        if (status == EnumStatus.MENSAGEM_DATA && message.body == 'abc') {//message.body == 'abc'
             status = EnumStatus.MENSAGEM_HORARIO
             client
             .sendText(message.from, mensagemData())
-            .then((result) => {
-                //console.log('Result: ', result)
-            })
-            .catch((erro) => {
-                //console.error("Erro misera: ", erro);
-            });
+
         }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == EnumStatus.MENSAGEM_HORARIO)){ //valida se é um numero e se esta entre 1 e 10
-            dataEscolhida = getData(opcaoNumero)
+            dataEscolhida = getData(opcaoNumero)            
             status = EnumStatus.BUSCAR
-            client
-            .sendText(message.from, mensagemHorario())
-            .then((result) => {
-                //console.log('Result: ', result)
-            })
-            .catch((erro) => {
-                //console.error("Erro misera: ", erro);
-            });
+
+            mensagemHorario(dataEscolhida)
+            .then(data => {
+              client
+                .sendText(message.from, data)
+             })
+
+             .catch(error => {
+               client
+               .sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Contate o administrador. ")
+               console.error('Erro ao obter dados:', error);
+             })
+
         }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == EnumStatus.BUSCAR)){
-            horarioEscolhido = getHorario(opcaoNumero)
-            client
-            .sendText(message.from, buscarExtracao(dataEscolhida, horarioEscolhido))
-            .then((result) => {
-                //console.log('Result: ', result)
-            })
-            .catch((erro) => {
-                //console.error("Erro misera: ", erro);
-            });
+            getHorario(opcaoNumero, dataEscolhida)
+              .then((horarioEscolhido) => {
+                buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
+                .then(data => {
+                  client
+                    .sendText(message.from, mensagemResultado(data))
+                    status = EnumStatus.MENSAGEM_DATA
+                 })
+   
+                 .catch(error => {
+                   client
+                   .sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Contate o administrador. ")
+                   console.error('Erro ao obter dados:', error);
+                 })
+              })
         } else{
           console.log("qualaer cosas")
         }
@@ -58,9 +63,8 @@ function mensagemData() {
     for (let i = 1; i < 11; i++) {
         const previousDate = new Date(today);
         previousDate.setDate(today.getDate() - i);
-        const formattedDate = `${previousDate.getDate().toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
+        const formattedDate = `${(previousDate.getDate() + 1).toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
         mensagem = mensagem + '\n' + i + ' - '+formattedDate
-    
     }
     return mensagem
 }
@@ -69,61 +73,117 @@ function mensagemData() {
 function getData(opcao){
     let listaDatas = []
     const today = new Date();
-  
+    
     for (let i = 1; i < 11; i++) {
         const previousDate = new Date(today);
         previousDate.setDate(today.getDate() - i);
-        const formattedDate = `${previousDate.getDate().toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
+        let dia = (previousDate.getDate() + 1).toString().padStart(2, '0')
+        let mes = (previousDate.getMonth() + 1).toString().padStart(2, '0')
+        let ano = previousDate.getFullYear()
+        const formattedDate = `${ano}-${mes}-${dia}`;
         listaDatas.push(formattedDate)
     }
     return listaDatas[opcao-1]
+
 }
 
 //retorna o horario escolhido
-function mensagemHorario(){
-    let mensagem = 'Certo, agora *selecione um horario*\n\n1 - 09:45 PARATODOS \n2 - 10:45 LOTEP \n3 - 11:00 LOCAL \n4 - 12:45 LOTEP \n5 - 14:40 LOCAL \n6 - 15:45 LOTEP \n7 - 18:10 LOTEP \n8 - 20:30 PARATODOS'
-    return mensagem
-}
-
-function getHorario(opcaoNumero){
-    const horarios = [
-        '09:45:00',
-        '10:45:00',
-        '11:00:00',
-        '12:45:00',
-        '14:40:00',
-        '15:45:00',
-        '18:10:00',
-        '20:30:00'
-      ];
-      return horarios[opcaoNumero-1]
-}
-//PAROU AQUI
-function buscarExtracao(dataEscolhida, horarioEscolhido){
-    fetch('https://api.exemplo.com/dados')
-  .then(response => {
+async function mensagemHorario(dataEscolhida, isMensagem = true){
+  //validar se o dia é quarta ou sabado para poder mostra o horario da federal
+  let mensagem = 'Certo, agora *selecione um horario*\n\n'
+  let url = `https://gestaobsj.com.br/Server/Extracao.php?getHorariosByDate=true&data_extracao=${dataEscolhida}`
+  try {
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Não foi possível obter os dados');
     }
-    return response.json(); // Retorna uma promise com os dados JSON
-  })
-  .then(data => {
-    // Faça algo com os dados recebidos (data)
-    console.log(data);
-  })
-  .catch(error => {
-    // Trata qualquer erro ocorrido durante a requisição
+    const data = await response.json();
+
+    let contator = 1
+
+    if (data.federal == true){
+      mensagem = mensagem + '1 - FEDERAL\n'
+      contator = 2
+    }
+
+    data.horarios.forEach((obj, i) => {
+      mensagem = mensagem + (i+contator) + ' - ' + obj.hora_extracao + ' ' + obj.tipo_extracao + '\n'
+    });
+
+    if (isMensagem == true){
+      return mensagem;
+    }else{
+      return data
+    }
+
+  } catch (error) {
     console.error('Erro:', error);
-  });
+    throw error; // Propaga o erro para quem chamou a função
+  }
 }
 
-  module.exports = {
+async function getHorario(opcaoNumero, dataEscolhida){
+  let data = await mensagemHorario(dataEscolhida, false)
+  console.log(data)
+  let horarios = []
+  
+  if (data.federal == true){
+    horarios.push('FEDERAL')
+  }
+
+  data.horarios.forEach((obj) => {
+    horarios.push(obj.hora_extracao)
+  });
+
+  return horarios[opcaoNumero-1]
+}
+
+async function buscarExtracao(dataEscolhida, horarioEscolhido, isFederal){
+  let url = ''
+  if (isFederal == true){
+    url = `https://gestaobsj.com.br/Server/Extracao.php?getFederalByDate=true&data_extracao=${dataEscolhida}`
+  }else{
+    url = `https://gestaobsj.com.br/Server/Extracao.php?getByDateAndTime=true&data_extracao=${dataEscolhida}&horario_extracao=${horarioEscolhido}`
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Não foi possível obter os dados');
+    }
+    const data = await response.json();
+    return data[0];
+  } catch (error) {
+    console.error('Erro:', error);
+    throw error; // Propaga o erro para quem chamou a função
+  }
+}
+
+function mensagemResultado(obj) {
+  var animais = ["Avestruz", "Águia", "Burro", "Borboleta", "Cachorro", "Cabra", "Carneiro", "Camelo", "Cobra", "Coelho", "Cavalo", "Elefante", "Galo", "Gato",
+      "Jacaré", "Leão", "Macaco", "Porco", "Pavão", "Peru", "Touro", "Tigre", "Urso", "Veado", "Vaca"];
+  var arr = [Math.ceil((parseInt(obj._1_extracao.substr(2, 3)) == 0 ? 25 : parseInt(obj._1_extracao.substr(2, 3)) / 4)),
+  Math.ceil((parseInt(obj._2_extracao.substr(2, 3)) == 0 ? 25 : parseInt(obj._2_extracao.substr(2, 3)) / 4)),
+  Math.ceil((parseInt(obj._3_extracao.substr(2, 3)) == 0 ? 25 : parseInt(obj._3_extracao.substr(2, 3)) / 4)),
+  Math.ceil((parseInt(obj._4_extracao.substr(2, 3)) == 0 ? 25 : parseInt(obj._4_extracao.substr(2, 3)) / 4)),
+  Math.ceil((parseInt(obj._5_extracao.substr(2, 3)) == 0 ? 25 : parseInt(obj._5_extracao.substr(2, 3)) / 4))];
+
+  var text = '*BANCA SÃO JOSÉ*\n*RESULTADO '
+  +(obj.tipo_extracao=="FEDERAL"?obj.tipo_extracao:"DAS "+obj.hora_extracao.substr(0, 5))+
+  '*\n*1º '+obj._1_extracao+'*```'+("          " + animais[arr[0] - 1].toUpperCase()).slice(-10)+ " " + ("00" + arr[0]).slice(-2)+'```'+
+  '\n*2º '+obj._2_extracao+'*```'+("          " + animais[arr[1] - 1].toUpperCase()).slice(-10)+ " " + ("00" + arr[1]).slice(-2)+'```'+
+  '\n*3º '+obj._3_extracao+'*```'+("          " + animais[arr[2] - 1].toUpperCase()).slice(-10)+ " " + ("00" + arr[2]).slice(-2)+'```'+
+  '\n*4º '+obj._4_extracao+'*```'+("          " + animais[arr[3] - 1].toUpperCase()).slice(-10)+ " " + ("00" + arr[3]).slice(-2)+'```'+
+  '\n*5º '+obj._5_extracao+'*```'+("          " + animais[arr[4] - 1].toUpperCase()).slice(-10)+ " " + ("00" + arr[4]).slice(-2)+'```'+
+  '\n```     '+new Date(obj.data_extracao.replace('-', '/')).toLocaleDateString()+'     ```';
+  
+  return text;
+  //window.open('https://api.whatsapp.com/send?text=' + window.encodeURIComponent(text), "_blank");
+
+}
+
+module.exports = {
     start,
     getData,
     getHorario
-  };
-
-
-//exeibirMenu() retorno
-//tratarMensagem(mensagem) retorno
-
+};
