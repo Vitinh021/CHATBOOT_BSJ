@@ -1,19 +1,37 @@
-
 const EnumStatus = {
     MENSAGEM_DATA: 1,
     MENSAGEM_HORARIO: 2,
     BUSCAR: 3
   };
 
+  var status
+
+function cancelarAtendimentoSeNaoResponder(client, chatId, message) {
+    const tempoLimite = 5000; // 30 segundos em milissegundos
+    setTimeout(() => {
+      client.stopPhoneWatchdog(chatId)
+        .then(() => {
+          client.sendText(message.from, "Atendimento cancelado devido à falta de resposta do cliente.")
+          status = EnumStatus.MENSAGEM_DATA
+        })
+        .catch((error) => {
+          console.error('Erro ao cancelar o atendimento:', error);
+        });
+    }, tempoLimite);
+  }
+
 function start(client) {
-    var status = EnumStatus.MENSAGEM_DATA
+    status = EnumStatus.MENSAGEM_DATA
     let dataEscolhida = null
     let horarioEscolhido = null
     client.onMessage((message) => {
-
+        const chatId = message.chatId;
+        console.log(chatId)
+        
         let opcaoNumero = parseInt(message.body)
 
         if (status == EnumStatus.MENSAGEM_DATA && message.body == 'abc') {//message.body == 'abc'
+            cancelarAtendimentoSeNaoResponder(client, chatId, message)
             status = EnumStatus.MENSAGEM_HORARIO
             client
             .sendText(message.from, mensagemData())
