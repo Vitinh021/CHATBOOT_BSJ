@@ -1,42 +1,55 @@
 const EnumStatus = {
-    MENSAGEM_DATA: 1,
-    MENSAGEM_HORARIO: 2,
-    BUSCAR: 3
+    PRIMEIRA_MENSAGEM: 1,
+    ATENDIMENTO_OU_DATA: 2,
+    MENSAGEM_DATA: 3,
+    MENSAGEM_HORARIO: 4,
+    BUSCAR: 5,
+    ATENDIMENTO_FUNCIONARIO: 6
   };
 
-  var status
-
-function cancelarAtendimentoSeNaoResponder(client, chatId, message) {
-    const tempoLimite = 5000; // 30 segundos em milissegundos
-    setTimeout(() => {
-      client.stopPhoneWatchdog(chatId)
-        .then(() => {
-          client.sendText(message.from, "Atendimento cancelado devido à falta de resposta do cliente.")
-          status = EnumStatus.MENSAGEM_DATA
-        })
-        .catch((error) => {
-          console.error('Erro ao cancelar o atendimento:', error);
-        });
-    }, tempoLimite);
-  }
+var status
+let timeoutId
 
 function start(client) {
-    status = EnumStatus.MENSAGEM_DATA
+    status = EnumStatus.PRIMEIRA_MENSAGEM
     let dataEscolhida = null
     let horarioEscolhido = null
+    
     client.onMessage((message) => {
         const chatId = message.chatId;
         console.log(chatId)
+        console.log(status)
+        console.log(message.body)
+        timeoutAtendimento(client, chatId, message, 600000) //pelo caminho feliz, o atendimento tem 10 minutos
         
         let opcaoNumero = parseInt(message.body)
 
-        if (status == EnumStatus.MENSAGEM_DATA && message.body == 'abc') {//message.body == 'abc'
-            cancelarAtendimentoSeNaoResponder(client, chatId, message)
+        if (status == EnumStatus.PRIMEIRA_MENSAGEM && message.body != '') {
+          client
+          .sendText(message.from, primeiraMesagem())
+          status = EnumStatus.ATENDIMENTO_OU_DATA //mudar para status bem vindo
+
+        }else if (status == EnumStatus.ATENDIMENTO_OU_DATA && message.body == '1') {
+            timeoutAtendimento(client, chatId, message, 600000)
             status = EnumStatus.MENSAGEM_HORARIO
             client
             .sendText(message.from, mensagemData())
 
+        }else if(status == EnumStatus.ATENDIMENTO_OU_DATA && message.body == '2'){
+            timeoutAtendimento(client, chatId, message, 600000)
+            status = EnumStatus.ATENDIMENTO_FUNCIONARIO
+            client
+            .sendText(message.from, 'Estamos providenciando um atendente.\nCaso queira encerrar o atendimento, digite 0... ')
+
+        }else if(status == EnumStatus.ATENDIMENTO_FUNCIONARIO && message.body=='0'){ //se quiser que o ciclo seja encerrado sempre que o usuário envie 0, tirar a validação do status da estrutura de condição
+          timeoutAtendimento(client, chatId, message, 1)
+
+        }else if(status == EnumStatus.ATENDIMENTO_FUNCIONARIO && message.body != ''){
+            timeoutAtendimento(client, chatId, message, 300000) //5 minutos
+            //com isso, durante um atendimento com um funcionario, após n minutos da ultima mensagem enviada pelo cliente, o atendimento será finalizado
+
         }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == EnumStatus.MENSAGEM_HORARIO)){ //valida se é um numero e se esta entre 1 e 10
+            timeoutAtendimento(client, chatId, message, 300000) //5 minutos  
             dataEscolhida = getData(opcaoNumero)            
             status = EnumStatus.BUSCAR
 
@@ -48,34 +61,39 @@ function start(client) {
 
              .catch(error => {
                client
-               .sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Contate o administrador. ")
-               console.error('Erro ao obter dados:', error);
+               .sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Atendimento encerrado.")
+               status=EnumStatus.PRIMEIRA_MENSAGEM
              })
 
         }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == EnumStatus.BUSCAR)){
+          timeoutAtendimento(client, chatId, message, 300000) //5 minutos
             getHorario(opcaoNumero, dataEscolhida)
               .then((horarioEscolhido) => {
                 buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
                 .then(data => {
                   client
                     .sendText(message.from, mensagemResultado(data))
-                    status = EnumStatus.MENSAGEM_DATA
+                    status = EnumStatus.PRIMEIRA_MENSAGEM
                  })
    
                  .catch(error => {
                    client
-                   .sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Contate o administrador. ")
+                   .sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+                   timeoutAtendimento(client, chatId, message, 120000)
                    console.error('Erro ao obter dados:', error);
                  })
               })
-        } else{
-          console.log("qualaer cosas")
+
+        }else if(status!=EnumStatus.ATENDIMENTO_FUNCIONARIO){
+          client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+          timeoutAtendimento(client, chatId, message, 120000) //se após dois minutos de digitar uma opção inválida ele nao fizer nada, o atendimento é encerrado
+          console.log("qualquer coisa")
         }
     });
   }
   
 function mensagemData() {
-    let mensagem = 'Olá, BANCA SÃO JOSÉ agradece seu contato.\n*Selecione uma data*\n'
+    let mensagem = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
     
     const today = new Date();
     for (let i = 1; i < 11; i++) {
@@ -108,7 +126,7 @@ function getData(opcao){
 //retorna o horario escolhido
 async function mensagemHorario(dataEscolhida, isMensagem = true){
   //validar se o dia é quarta ou sabado para poder mostra o horario da federal
-  let mensagem = 'Certo, agora *selecione um horario*\n\n'
+  let mensagem = 'Certo, agora *selecione um horario*\n🍀BOA SORTE🍀\n'
   let url = `https://gestaobsj.com.br/Server/Extracao.php?getHorariosByDate=true&data_extracao=${dataEscolhida}`
   try {
     const response = await fetch(url);
@@ -198,6 +216,30 @@ function mensagemResultado(obj) {
   return text;
   //window.open('https://api.whatsapp.com/send?text=' + window.encodeURIComponent(text), "_blank");
 
+}
+
+function primeiraMesagem(){
+  var text = 'Olá, BANCA SÃO JOSÉ agradece seu contato.\n\nDigite *1* para acessar as datas das extrações;\nDigite *2* para conversar com um de nossos atendentes.'
+  return text
+}
+
+function timeoutAtendimento(client, chatId, message, tempoDuracao) {
+
+  //dessa forma, o programa permite apenas uma execução do time out por vez. Util para casos em que a conversa será encerradas com timeouts diferentes 
+  if (timeoutId){
+    clearTimeout(timeoutId)
+  }
+
+  timeoutId = setTimeout(() => {
+    client.stopPhoneWatchdog(chatId)
+      .then(() => {
+        client.sendText(message.from, "Atendimento finalizado.")
+        status = EnumStatus.PRIMEIRA_MENSAGEM
+      })
+      .catch((error) => {
+        console.error('Erro ao cancelar o atendimento:', error);
+      });
+  }, tempoDuracao);
 }
 
 module.exports = {
