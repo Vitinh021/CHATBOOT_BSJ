@@ -14,11 +14,20 @@ const utils = require('./utils.js');
 const app = express();
 
 
+const wppconnect = require('@wppconnect-team/wppconnect');
 
+wppconnect
+  .create({
+    session: "sessionName",
+    headless: true, // Headless chrome
+    debug: true,
+  })
+  .then((client) => utils.start(client))
+  .catch((error) => console.log(error));
 
 
 //LEMBRAR DE COLOCAR DO const fs = require('fs'); ATE .catch((error) => console.log(error)); DENTRO DA ROTA
-app.post('/gerar', (req, res) => {
+/*app.post('/gerar', (req, res) => {
   const fs = require('fs');
   const wppconnect = require('@wppconnect-team/wppconnect');
   
@@ -61,6 +70,6 @@ app.post('/gerar', (req, res) => {
     })
     .then((client) => utils.start(client))
     .catch((error) => console.log(error));
-});
+//});*/
 
 module.exports = app;
