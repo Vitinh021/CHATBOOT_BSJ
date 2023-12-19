@@ -4,7 +4,8 @@ const EnumStatus = {
     MENSAGEM_DATA: 3,
     MENSAGEM_HORARIO: 4,
     BUSCAR: 5,
-    ATENDIMENTO_FUNCIONARIO: 6
+    ATENDIMENTO_FUNCIONARIO: 6,
+    CONFIRMACAO_NOVO_ATENDIMENTO: 7
   };
 
 var status
@@ -13,7 +14,6 @@ let timeoutId
 function start(client) {
     status = EnumStatus.PRIMEIRA_MENSAGEM
     let dataEscolhida = null
-    let horarioEscolhido = null
     
     client.onMessage(async (message) => {
         const chatId = message.chatId;
@@ -34,10 +34,10 @@ function start(client) {
         }else if(status == EnumStatus.ATENDIMENTO_OU_DATA && message.body == '2'){
             timeoutAtendimento(client, chatId, message, 600000)
             status = EnumStatus.ATENDIMENTO_FUNCIONARIO
-            client.sendText(message.from, 'Estamos providenciando um atendente.\nCaso queira encerrar o atendimento, digite 0... ')
+            client.sendText(message.from, 'Você agora está conversando com um atendente.\nCaso queira encerrar o atendimento, digite 0... ')
 
         }else if(status == EnumStatus.ATENDIMENTO_FUNCIONARIO && message.body=='0'){ //se quiser que o ciclo seja encerrado sempre que o usuário envie 0, tirar a validação do status da estrutura de condição
-          timeoutAtendimento(client, chatId, message, 1)
+          timeoutAtendimento(client, chatId, message, 1000)
 
         }else if(status == EnumStatus.ATENDIMENTO_FUNCIONARIO && message.body != ''){
             timeoutAtendimento(client, chatId, message, 300000) //5 minutos
@@ -53,10 +53,11 @@ function start(client) {
               client.sendText(message.from, data)
              })
 
-             .catch(error => {
+             /* .catch(error => {
                client.sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Atendimento encerrado.")
                status=EnumStatus.PRIMEIRA_MENSAGEM
-             })
+             }) 
+             erro nunca ocorrerá*/
 
         }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == EnumStatus.BUSCAR)){
           timeoutAtendimento(client, chatId, message, 300000) //5 minutos
@@ -64,8 +65,10 @@ function start(client) {
               .then((horarioEscolhido) => {
                 buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
                 .then(data => {
-                  client.sendText(message.from, mensagemResultado(data))
-                    status = EnumStatus.PRIMEIRA_MENSAGEM
+                    client.sendText(message.from, mensagemResultado(data))
+                    status = EnumStatus.CONFIRMACAO_NOVO_ATENDIMENTO
+                    client.sendText(message.from, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
+                    timeoutAtendimento(client, chatId, message, 120000) //o usuário tem dois minutos para decidir, após esse tempo o atendimento é encerrado
                  })
    
                  .catch(error => {
@@ -74,6 +77,14 @@ function start(client) {
                    console.error('Erro ao obter dados:', error);
                  })
               })
+
+        }else if(status==EnumStatus.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='1'){
+          timeoutAtendimento(client, chatId, message, 600000)
+          status = EnumStatus.MENSAGEM_HORARIO
+          client.sendText(message.from, mensagemData())
+
+        }else if(status==EnumStatus.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='2'){
+          timeoutAtendimento(client, chatId, message, 1000)
 
         }else if(status!=EnumStatus.ATENDIMENTO_FUNCIONARIO){
           client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
@@ -224,7 +235,7 @@ function timeoutAtendimento(client, chatId, message, tempoDuracao) {
   timeoutId = setTimeout(() => {
     client.stopPhoneWatchdog(chatId)
       .then(() => {
-        client.sendText(message.from, "Atendimento finalizado.")
+        client.sendText(message.from, "FICAMOS FELIZES EM ATENDER,\nAGRADECEMOS A PREFERÊNCIA. 😃")
         status = EnumStatus.PRIMEIRA_MENSAGEM
       })
       .catch((error) => {
