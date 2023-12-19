@@ -13,9 +13,7 @@ const utils = require('./utils.js');
 
 const app = express();
 
-
 const wppconnect = require('@wppconnect-team/wppconnect');
-
 wppconnect
   .create({
     session: "sessionName",
@@ -24,7 +22,6 @@ wppconnect
   })
   .then((client) => utils.start(client))
   .catch((error) => console.log(error));
-
 
 //LEMBRAR DE COLOCAR DO const fs = require('fs'); ATE .catch((error) => console.log(error)); DENTRO DA ROTA
 /*app.post('/gerar', (req, res) => {
@@ -68,7 +65,7 @@ wppconnect
       },
       logQR: false,
     })
-    .then((client) => utils.start(client))
+    .then(async (client) => utils.start(client))
     .catch((error) => console.log(error));
 //});*/
 

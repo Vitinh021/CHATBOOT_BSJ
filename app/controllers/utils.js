@@ -15,31 +15,26 @@ function start(client) {
     let dataEscolhida = null
     let horarioEscolhido = null
     
-    client.onMessage((message) => {
+    client.onMessage(async (message) => {
         const chatId = message.chatId;
-        console.log(chatId)
-        console.log(status)
-        console.log(message.body)
+
         timeoutAtendimento(client, chatId, message, 600000) //pelo caminho feliz, o atendimento tem 10 minutos
         
         let opcaoNumero = parseInt(message.body)
 
         if (status == EnumStatus.PRIMEIRA_MENSAGEM && message.body != '') {
-          client
-          .sendText(message.from, primeiraMesagem())
+          client.sendText(message.from, primeiraMesagem())
           status = EnumStatus.ATENDIMENTO_OU_DATA //mudar para status bem vindo
 
         }else if (status == EnumStatus.ATENDIMENTO_OU_DATA && message.body == '1') {
             timeoutAtendimento(client, chatId, message, 600000)
             status = EnumStatus.MENSAGEM_HORARIO
-            client
-            .sendText(message.from, mensagemData())
+            client.sendText(message.from, mensagemData())
 
         }else if(status == EnumStatus.ATENDIMENTO_OU_DATA && message.body == '2'){
             timeoutAtendimento(client, chatId, message, 600000)
             status = EnumStatus.ATENDIMENTO_FUNCIONARIO
-            client
-            .sendText(message.from, 'Estamos providenciando um atendente.\nCaso queira encerrar o atendimento, digite 0... ')
+            client.sendText(message.from, 'Estamos providenciando um atendente.\nCaso queira encerrar o atendimento, digite 0... ')
 
         }else if(status == EnumStatus.ATENDIMENTO_FUNCIONARIO && message.body=='0'){ //se quiser que o ciclo seja encerrado sempre que o usuário envie 0, tirar a validação do status da estrutura de condição
           timeoutAtendimento(client, chatId, message, 1)
@@ -55,13 +50,11 @@ function start(client) {
 
             mensagemHorario(dataEscolhida)
             .then(data => {
-              client
-                .sendText(message.from, data)
+              client.sendText(message.from, data)
              })
 
              .catch(error => {
-               client
-               .sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Atendimento encerrado.")
+               client.sendText(message.from, "Infelizmente não conseguimos localizar o resultado. Atendimento encerrado.")
                status=EnumStatus.PRIMEIRA_MENSAGEM
              })
 
@@ -71,14 +64,12 @@ function start(client) {
               .then((horarioEscolhido) => {
                 buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
                 .then(data => {
-                  client
-                    .sendText(message.from, mensagemResultado(data))
+                  client.sendText(message.from, mensagemResultado(data))
                     status = EnumStatus.PRIMEIRA_MENSAGEM
                  })
    
                  .catch(error => {
-                   client
-                   .sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+                   client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
                    timeoutAtendimento(client, chatId, message, 120000)
                    console.error('Erro ao obter dados:', error);
                  })
