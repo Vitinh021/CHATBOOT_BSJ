@@ -7,7 +7,6 @@ const routes = require('./app/controllers/routes.js')
 
 app.use('/', routes)
 
-
 app.listen(3000, () => {
     console.log(`rodando na porta 3000`)
 })

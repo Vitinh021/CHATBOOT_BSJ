@@ -1,15 +1,6 @@
 const express = require('express');
-const utils = require('./utils.js');
-
-//COMO FAZER A CONSULTA NO BANCO
-//connection.query('SELECT * FROM usuarios', (error, results) => {
-//  if (error) {
-//    console.error('Erro ao executar a consulta:', error);
-//    res.status(500).send('Erro ao buscar usuários.');
-//    return;
-//  }
-//  res.json(results);
-//});
+const controller = require('./mainController.js');
+const type = require('./types');
 
 const app = express();
 
@@ -20,53 +11,85 @@ wppconnect
     headless: true, // Headless chrome
     debug: true,
   })
-  .then((client) => utils.start(client))
+  .then((client) => start(client))
   .catch((error) => console.log(error));
+  
+//Funcao principal, contem todos os caminhos que o cliente pode percorrer no whatsApp
+function start(client) {
+    var status = type.BEM_VINDO
+    let dataEscolhida = null
+    
+    client.onMessage(async (message) => {
+        const chatId = message.chatId;
+        var phone = message.from;
+        var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
+        let opcaoNumero = parseInt(message.body)
 
-//LEMBRAR DE COLOCAR DO const fs = require('fs'); ATE .catch((error) => console.log(error)); DENTRO DA ROTA
-/*app.post('/gerar', (req, res) => {
-  const fs = require('fs');
-  const wppconnect = require('@wppconnect-team/wppconnect');
+        if (status == type.BEM_VINDO && message.body != '') {
+          controller.bemVindo(client, phone, nome)
+          status = type.ESCOLHA_ATENDIMENTO
+
+        }else if (status == type.ESCOLHA_ATENDIMENTO && message.body == '1') {
+          controller.imprimirDatas(client, phone)
+          status = type.ATENDIMENTO_EXTRACAO_DATA
+          tempoAtentimento(client, chatId, message, 30000)//10 minutos
+
+        }else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
+          controller.iniciaAtendimento(client, phone)
+          status = type.ATENDIMENTO_FUNCIONARIO
+          tempoAtentimento(client, chatId, message, 900000)//tem 15 minutos
+          
+        }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_DATA)){
+            dataEscolhida = controller.getData(opcaoNumero)            
+            controller.imprimirHorario(client, phone, dataEscolhida)
+            status = type.ATENDIMENTO_EXTRACAO_HORA
+
+        }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_HORA)){
+          controller.getHorario(client, phone, opcaoNumero, dataEscolhida)
+            .then((horarioEscolhido) => {
+              controller.buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
+              .then(data => {
+                  client.sendText(phone, controller.mensagemResultado(data))
+                  status = type.CONFIRMACAO_NOVO_ATENDIMENTO
+                  client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
+               })
   
-  wppconnect
-    .create({
-      session: 'sessionName',
-      catchQR: (base64Qr, asciiQR) => {
-        console.log(asciiQR); // Optional to log the QR in the terminal
-        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-          response = {};
-  
-        if (matches.length !== 3) {
-          return new Error('Invalid input string');
+               .catch(error => {
+                 client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+                 console.error('Erro ao obter dados:', error);
+               })
+            })
+
+        }else if(status == type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='1'){
+          controller.imprimirDatas(client, phone)
+          status = type.ATENDIMENTO_EXTRACAO_DATA
+
+        }else if(status==type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='2'){
+          tempoAtentimento(client, chatId, phone, 0)
+          status = type.BEM_VINDO
+
+        }else if(status != type.ATENDIMENTO_FUNCIONARIO){
+          client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+
+        }else if(message.body=='0'){
+          //esse status nãi retorna nada, veja por que
+          status = tempoAtentimento(client, chatId, phone, 0)
         }
-        response.type = matches[1];
-        response.data = new Buffer.from(matches[2], 'base64');
-  
-        var imageBuffer = response;
-        require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
-            if (err != null) {
-              console.log(err);
-            } else {
-                  // Ler o arquivo recém-criado e enviar como resposta
-                  fs.readFile('out.png', function (error, data) {
-                      if (error) {
-                          console.error(error);
-                          res.status(500).send('Erro ao ler o arquivo');
-                      } else {
-                          res.writeHead(200, {
-                              'Content-Type': 'image/png'
-                          });
-                          res.end(data); // Enviar o conteúdo do arquivo como resposta
-                      }
-                  });
-              }
-          }
-        );
-      },
-      logQR: false,
-    })
-    .then(async (client) => utils.start(client))
-    .catch((error) => console.log(error));
-//});*/
+    });
+}
+
+//define o tempo de atendimento para cada cliente, após o tempo o chat finaliza o atendimento
+function tempoAtentimento(client, chatId, phone, tempoDuracao) {
+  setTimeout(() => {
+    client.stopPhoneWatchdog(chatId)
+      .then(() => {
+        client.sendText(phone, "FICAMOS FELIZES EM ATENDER,\nAGRADECEMOS A PREFERÊNCIA. 😃")
+        return type.BEM_VINDO
+      })
+      .catch((error) => {
+        console.error('Erro ao cancelar o atendimento:', error);
+      });
+  }, tempoDuracao);
+}
 
 module.exports = app;
