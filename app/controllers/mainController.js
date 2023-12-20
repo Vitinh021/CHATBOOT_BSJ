@@ -25,7 +25,7 @@ function imprimirDatas(client, phone) {
 
 //inicia atendimento com o funcionario
 function iniciaAtendimento(client, phone){
-  client.sendText(phone, 'Você agora está conversando com um atendente.\nFique a vontade para escrever sua dúvida!')
+  client.sendText(phone, 'Você agora está conversando com um atendente.\nFaça seu pedido!')
 }
 
 //retorna a data escolhida pelo cliente
