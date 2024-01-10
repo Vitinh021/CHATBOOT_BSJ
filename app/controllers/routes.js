@@ -1,8 +1,13 @@
 const express = require('express');
-const controller = require('./mainController.js');
+const controller = require('./maincontroller.js');
+const service = require('../service/StatusService.js');
 const type = require('./types');
 
 const app = express();
+
+//service.readStatus(8799906)
+//service.createStatus("666")
+service.updateStatus("666",type.ATENDIMENTO_FUNCIONARIO)
 
 const wppconnect = require('@wppconnect-team/wppconnect');
 wppconnect
@@ -13,46 +18,86 @@ wppconnect
   })
   .then((client) => start(client))
   .catch((error) => console.log(error));
-  
+
 //Funcao principal, contem todos os caminhos que o cliente pode percorrer no whatsApp
 function start(client) {
-    const statusObject = {status: type.BEM_VINDO}
-    let dataEscolhida = null
+
+  setTimeout(() => {
+    client.stopPhoneWatchdog(chatId)
+      .then(() => {
+        client.sendText(phone, "FICAMOS FELIZES EM ATENDÊ-LO,\nAGRADECEMOS A PREFERÊNCIA. 😃")
+        //status = type.BEM_VINDO
+      })
+      .catch((error) => {
+        console.error('Erro ao cancelar o atendimento:', error);
+      });
+  }, 50000);
+
+
+  let dataEscolhida = null
+  
+  client.onMessage(async (message) => {//mensagem acaou de chegar
+
+        /*
+        //TABELA DO BANCO
+        phone :: data/hora :: status 
+        
+        //LOGICA
+        existe esse phone no banco?
+          sim-> qual o status? 
+                finalizado -> muda para bem_vindo e segue, update data/hora
+               !finalizado -> pega o status e segue o baile
     
-    client.onMessage(async (message) => {
-      console.log(statusObject.status)
+        se não existir
+          -> cria e sague
+
+        // COMO SUBIR APLICAÇÃO NA HOSTIGER
+        // CRIAR FRONT PARA RECEBER QR-CODE
+        // INFORMAR SE O QR-CODE FOI LIDO E SE A APLICAÇÃO ESTPA RODANDO OU NÃO (PING-PONG)
+
+        */
+
         var chatId = message.chatId;
         var phone = message.from;
         var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
+        var status 
+        let res = service.readStatus()
+        if (res.data){//se existir
+          status = res.data.status
+        }else{
+          service.createStatus(phone)
+        }
+
         let opcaoNumero = parseInt(message.body)
 
-        if (statusObject.status == type.BEM_VINDO && message.body != '') {
+        if (status == type.BEM_VINDO && message.body != '') {
           controller.bemVindo(client, phone, nome)
-          statusObject.status = type.ESCOLHA_ATENDIMENTO
 
-        }else if (statusObject.status == type.ESCOLHA_ATENDIMENTO && message.body == '1') {
+          .status = type.ESCOLHA_ATENDIMENTO
+
+        }else if (status == type.ESCOLHA_ATENDIMENTO && message.body == '1') {
           controller.imprimirDatas(client, phone)
-          statusObject.status = type.ATENDIMENTO_EXTRACAO_DATA
+          status = type.ATENDIMENTO_EXTRACAO_DATA
           tempoAtentimento(client, chatId, phone, 600000)//10 minutos
-          console.log(statusObject.status)
+          console.log(status)
 
-        }else if(statusObject.status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
+        }else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
           controller.iniciaAtendimento(client, phone)
-          statusObject.status = type.ATENDIMENTO_FUNCIONARIO
+          status = type.ATENDIMENTO_FUNCIONARIO
           tempoAtentimento(client, chatId, phone, 900000)//tem 15 minutos
           
-        }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (statusObject.status == type.ATENDIMENTO_EXTRACAO_DATA)){
+        }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_DATA)){
             dataEscolhida = controller.getData(opcaoNumero)            
             controller.imprimirHorario(client, phone, dataEscolhida)
-            statusObject.status = type.ATENDIMENTO_EXTRACAO_HORA
+            status = type.ATENDIMENTO_EXTRACAO_HORA
 
-        }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (statusObject.status == type.ATENDIMENTO_EXTRACAO_HORA)){
+        }else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_HORA)){
           controller.getHorario(client, phone, opcaoNumero, dataEscolhida)
             .then((horarioEscolhido) => {
               controller.buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
               .then(data => {
                   client.sendText(phone, controller.mensagemResultado(data))
-                  statusObject.status = type.CONFIRMACAO_NOVO_ATENDIMENTO
+                  status = type.CONFIRMACAO_NOVO_ATENDIMENTO
                   client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
                })
   
@@ -62,17 +107,17 @@ function start(client) {
                })
             })
 
-        }else if(statusObject.status == type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='1'){
+        }else if(status == type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='1'){
           controller.imprimirDatas(client, phone)
-          statusObject.status = type.ATENDIMENTO_EXTRACAO_DATA
+          status = type.ATENDIMENTO_EXTRACAO_DATA
 
-        }else if(statusObject.status==type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='2'){
+        }else if(status==type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='2'){
           tempoAtentimento(client, chatId, phone, 0, statusObject)
           
         }else if(message.body=='0'){
-          statusObject.status = tempoAtentimento(client, chatId, phone, 0, statusObject)
+          status = tempoAtentimento(client, chatId, phone, 0, statusObject)
 
-        }else if(statusObject.status != type.ATENDIMENTO_FUNCIONARIO){
+        }else if(status != type.ATENDIMENTO_FUNCIONARIO){
           client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
 
         }
@@ -85,7 +130,7 @@ function tempoAtentimento(client, chatId, phone, tempoDuracao, statusObject) {
     client.stopPhoneWatchdog(chatId)
       .then(() => {
         client.sendText(phone, "FICAMOS FELIZES EM ATENDÊ-LO,\nAGRADECEMOS A PREFERÊNCIA. 😃")
-        statusObject.status = type.BEM_VINDO
+        //status = type.BEM_VINDO
       })
       .catch((error) => {
         console.error('Erro ao cancelar o atendimento:', error);
