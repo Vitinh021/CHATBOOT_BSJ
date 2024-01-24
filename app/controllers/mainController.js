@@ -1,6 +1,6 @@
 //Mensage de boas vindas 
-function bemVindo(client, phone, nome){
-  client.sendText(phone,
+async function bemVindo(client, phone, nome){
+  await client.sendText(phone,
     `Olá, ${nome}. BANCA SÃO JOSÉ agradece seu contato.\n\nDigite *1* para acessar as datas das extrações;\nDigite *2* para conversar com um de nossos atendentes.`
   )
 
@@ -26,6 +26,10 @@ function imprimirDatas(client, phone) {
 //inicia atendimento com o funcionario
 function iniciaAtendimento(client, phone){
   client.sendText(phone, 'Você agora está conversando com um atendente.\nFaça seu pedido!')
+
+  client.sendText(phone,
+    `Caso queira encerrar o atendimento, *DIGITE 0* a qualquer momento... `
+  )
 }
 
 //retorna a data escolhida pelo cliente
@@ -140,8 +144,10 @@ function mensagemResultado(obj) {
   '\n```     '+new Date(obj.data_extracao.replace('-', '/')).toLocaleDateString()+'     ```';
   
   return text;
-  //window.open('https://api.whatsapp.com/send?text=' + window.encodeURIComponent(text), "_blank");
+}
 
+function finalizarAtendimento(client, phone){
+    client.sendText(phone, "FICAMOS FELIZES EM ATENDÊ-LO,\nAGRADECEMOS A PREFERÊNCIA. 😃")
 }
 
 //exporta funções
@@ -153,5 +159,6 @@ module.exports = {
   imprimirHorario,
   getHorario,
   buscarExtracao,
-  mensagemResultado
+  mensagemResultado,
+  finalizarAtendimento
 };

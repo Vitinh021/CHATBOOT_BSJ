@@ -35,9 +35,9 @@ async function createStatus(phone){
 }   
 
 //
-async function readStatus(phone){
+async function getByPhone(phone){
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone='+phone
-  fetch(url)
+  return fetch(url)
   .then(response => {
     if (!response.ok) {
       throw new Error('Network response was not ok.');
@@ -45,12 +45,11 @@ async function readStatus(phone){
     return response.json();
   })
   .then(data => {
-    console.log('Response from server:', data);
+    return data;
   })
   .catch(error => {
-    console.error('AAAAAAAAA:', error);
+    console.error('Error:', error);
   });
- 
 }
   
 //
@@ -58,7 +57,6 @@ async function updateStatus(phone, status){
 
   let dataFormatada = '';
   const formData = new FormData();
-
   if (status == type.BEM_VINDO){
     const agora = new Date();
     const ano = agora.getFullYear();
@@ -82,7 +80,7 @@ async function updateStatus(phone, status){
     body: formData
   };
 
-  fetch(url, options)
+  await fetch(url, options)
     .then(response => {
       response.json().then(res =>{
         console.log(res)
@@ -91,9 +89,6 @@ async function updateStatus(phone, status){
     .catch(error => {
       console.error('Erro:', error);
     });
-    //pegar data e hora atual do sistema
-    //atualizar
-    
 }
   
 //
@@ -101,11 +96,10 @@ async function deleteStatus(phone){
     //deletar
 }
       
-  
 //exporta funções
 module.exports = {
     createStatus,
-    readStatus,
+    getByPhone,
     updateStatus,
     deleteStatus
   };
