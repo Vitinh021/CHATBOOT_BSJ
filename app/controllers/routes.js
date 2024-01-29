@@ -5,7 +5,6 @@ const type = require('./types');
 
 const app = express();
 
-const fs = require('fs');
 const wppconnect = require('@wppconnect-team/wppconnect');
 wppconnect
   .create({
@@ -13,52 +12,17 @@ wppconnect
     headless: true, // Headles  s chrome
     debug: true,
     catchQR: (base64Qr, asciiQR) => {
-      console.log("DESGRAÇAAAAAAAAAAAA::: " + asciiQR); // Optional to log the QR in the terminal
-      console.log()   
-      console.log()   
-      console.log()   
       var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
         response = {};
-
-        console.log("DESGRAÇAAAAAAAAAAAA 222222::: " + matches.length)
-        console.log()
-        console.log()
-        console.log()
       if (matches.length !== 3) {
         return new Error('Invalid input string');
       }
       response.type = matches[1];
       response.data = new Buffer.from(matches[2], 'base64');
-
       var imageBuffer = response;
       require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
           if (err != null) {
-            console.log("DESGRAÇAAAAAAAAAAAA 33333::: " + err)
-            console.log()
-            console.log()
-            console.log()
-            console.log(err);
-          } else {
-                // Ler o arquivo recém-criado e enviar como resposta
-                fs.readFile('out.png', function (error, data) {
-                    if (error) {
-                        console.error(error);
-                        //res.status(500).send('Erro ao ler o arquivo');
-                    } else {
-                     /*  console.log()
-                      console.log()
-                      console.log()
-                      console.log("DESCRAÇA RESSS:::::" + res)
-                      console.log()
-                      console.log()
-                      console.log()
-                        res.writeHead(200, {
-                            'Content-Type': 'image/png'
-                        });
-                        res.end(data); // Enviar o conteúdo do arquivo como resposta */
-                    }
-                });
-            }
+          }
         }
       );
     }
@@ -68,66 +32,16 @@ wppconnect
 
 app.get('/gerar', (req, res) => {
   const fs = require('fs');
-  const wppconnect = require('@wppconnect-team/wppconnect');
-
-  wppconnect
-    .create({
-      session: 'sessionName',
-      catchQR: (base64Qr, asciiQR) => {
-        console.log("DESGRAÇAAAAAAAAAAAA::: " + asciiQR); // Optional to log the QR in the terminal
-        console.log()   
-        console.log()   
-        console.log()   
-        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-          response = {};
-
-          console.log("DESGRAÇAAAAAAAAAAAA 222222::: " + matches.length)
-          console.log()
-          console.log()
-          console.log()
-        if (matches.length !== 3) {
-          return new Error('Invalid input string');
-        }
-        response.type = matches[1];
-        response.data = new Buffer.from(matches[2], 'base64');
-
-        var imageBuffer = response;
-        require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
-            if (err != null) {
-              console.log("DESGRAÇAAAAAAAAAAAA 33333::: " + err)
-              console.log()
-              console.log()
-              console.log()
-              console.log(err);
-            } else {
-                  // Ler o arquivo recém-criado e enviar como resposta
-                  fs.readFile('out.png', function (error, data) {
-                      if (error) {
-                          console.error(error);
-                          res.status(500).send('Erro ao ler o arquivo');
-                      } else {
-                        console.log()
-                        console.log()
-                        console.log()
-                        console.log("DESCRAÇA RESSS:::::" + res)
-                        console.log()
-                        console.log()
-                        console.log()
-                          res.writeHead(200, {
-                              'Content-Type': 'image/png'
-                          });
-                          res.end(data); // Enviar o conteúdo do arquivo como resposta
-                      }
-                  });
-              }
-          }
-        );
-      },
-      logQR: false,
-    })
-    .then((client) => start(client))
-    .catch((error) => console.log(error));
-
+  fs.readFile('out.png', function (error, data) {
+    if (error) {
+        res.status(500).send('Erro ao ler o arquivo');
+    } else {
+        res.writeHead(200, {
+            'Content-Type': 'image/png'
+        });
+        res.end(data); // Enviar o conteúdo do arquivo como resposta
+    }
+  });
 })
 
 
