@@ -11,6 +11,8 @@ wppconnect
     session: "sessionName",
     headless: true, // Headles  s chrome
     debug: true,
+    autoClose: 600000,
+    disableWelcome: true,
     catchQR: (base64Qr, asciiQR) => {
       var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
         response = {};
