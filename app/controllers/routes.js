@@ -6,33 +6,35 @@ const type = require('./types');
 const app = express();
 
 const wppconnect = require('@wppconnect-team/wppconnect');
-wppconnect
-  .create({
-    session: "sessionName",
-    headless: true, // Headles  s chrome
-    debug: true,
-    autoClose: 600000,
-    disableWelcome: true,
-    catchQR: (base64Qr, asciiQR) => {
-      var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-        response = {};
-      if (matches.length !== 3) {
-        return new Error('Invalid input string');
-      }
-      response.type = matches[1];
-      response.data = new Buffer.from(matches[2], 'base64');
-      var imageBuffer = response;
-      require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
-          if (err != null) {
-          }
-        }
-      );
-    }
-  })
-  .then((client) => start(client))
-  .catch((error) => console.log(error));
+console.log(wppconnect)
 
-app.get('/gerar', (req, res) => {
+wppconnect
+.create({
+  session: "sessionName",
+  headless: "new", // Headles  s chrome
+  debug: true,
+  autoClose: false,
+  disableWelcome: true,
+  catchQR: (base64Qr, asciiQR) => {
+    var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
+      response = {};
+    if (matches.length !== 3) {
+      return new Error('Invalid input string');
+    }
+    response.type = matches[1];
+    response.data = new Buffer.from(matches[2], 'base64');
+    var imageBuffer = response;
+    require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
+        if (err != null) {
+        }
+      }
+    );
+  }
+})
+.then((client) => start(client))
+.catch((error) => console.log(error));
+
+app.get('/iniciar', (req, res) => {
   const fs = require('fs');
   fs.readFile('out.png', function (error, data) {
     if (error) {
@@ -46,19 +48,12 @@ app.get('/gerar', (req, res) => {
   });
 })
 
-
 //Funcao principal, contem todos os caminhos que o cliente pode percorrer no whatsApp
 function start(client) {
 
   let dataEscolhida = null
 
   client.onMessage(async (message) => {
-
-  /*
-  // COMO SUBIR APLICAÇÃO NA HOSTIGER
-  // CRIAR FRONT PARA RECEBER QR-CODE
-  // INFORMAR SE O QR-CODE FOI LIDO E SE A APLICAÇÃO ESTPA RODANDO OU NÃO (PING-PONG)
-  */
 
   var chatId = message.chatId;
   var phone = message.from;
@@ -104,22 +99,33 @@ function start(client) {
         service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_HORA)
     }
     
-    else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero < 10) && (status == type.ATENDIMENTO_EXTRACAO_HORA)){
+    else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_HORA)){
+
       controller.getHorario(client, phone, opcaoNumero, dataEscolhida)
         .then((horarioEscolhido) => {
-          controller.buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'))
-          .then(data => {
+          controller.buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'), (horarioEscolhido == 'TODOS'))
+           .then(async data => {
             if (data){
-              client.sendText(phone, controller.mensagemResultado(data))
+              
+              if (horarioEscolhido == 'TODOS'){
+                let mensagem_grande = ''
+                await data.forEach((obj, index) => {
+                  mensagem_grande = mensagem_grande + controller.mensagemResultado(obj) + '\n' + (index == data.length-1?'':'\n')
+                  console.log(index,data.length)
+                  console.log("-----------------------------------------------------------------------")
+                  console.log(obj)
+                });
+                await client.sendText(phone, mensagem_grande)
+              }else{
+                await client.sendText(phone, controller.mensagemResultado(data))
+              }
+
               service.updateStatus(phone,type.CONFIRMACAO_NOVO_ATENDIMENTO)
+              client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
             }
             else{
               throw new Error("Opção inválida! A opcao vai até 10.")
             }
-          })
-
-          .then(()=>{
-            client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
           })
 
           .catch(error => {

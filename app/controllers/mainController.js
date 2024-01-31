@@ -24,8 +24,8 @@ function imprimirDatas(client, phone) {
 }
 
 //inicia atendimento com o funcionario
-function iniciaAtendimento(client, phone){
-  client.sendText(phone, 'Você agora está conversando com um atendente.\nFaça seu pedido!')
+async function iniciaAtendimento(client, phone){
+  await client.sendText(phone, 'Você agora está conversando com um atendente.\nFaça seu pedido!')
 
   client.sendText(phone,
     `Caso queira encerrar o atendimento, *DIGITE 0* a qualquer momento... `
@@ -63,7 +63,6 @@ async function imprimirHorario(client, phone, dataEscolhida, isMensagem = true){
     const data = await response.json();
 
     let contator = 1
-
     if (data.federal == true){
       mensagem = mensagem + '1 - FEDERAL\n'
       contator = 2
@@ -72,6 +71,8 @@ async function imprimirHorario(client, phone, dataEscolhida, isMensagem = true){
     data.horarios.forEach((obj, i) => {
       mensagem = mensagem + (i+contator) + ' - ' + obj.hora_extracao + ' ' + obj.tipo_extracao + '\n'
     });
+
+    mensagem = mensagem + (data.horarios.length + contator) + ' - TODOS'
 
     if (isMensagem == true){
         client.sendText(phone, mensagem)
@@ -99,15 +100,20 @@ async function getHorario(client, phone, opcaoNumero, dataEscolhida){
     horarios.push(obj.hora_extracao)
   });
 
+  horarios.push('TODOS')
+
   return horarios[opcaoNumero-1]
 }
 
 //busca a extracao com base na data, hora e se é federal ou não
-async function buscarExtracao(dataEscolhida, horarioEscolhido, isFederal){
+async function buscarExtracao(dataEscolhida, horarioEscolhido, isFederal, isTodos){
   let url = ''
   if (isFederal == true){
     url = `https://gestaobsj.com.br/Server/Extracao.php?getFederalByDate=true&data_extracao=${dataEscolhida}`
-  }else{
+  } else if (isTodos == true) {
+    url = `https://gestaobsj.com.br/Server/Extracao.php?getByDateWhats=true&data_extracao=${dataEscolhida}`
+  }
+  else{
     url = `https://gestaobsj.com.br/Server/Extracao.php?getByDateAndTime=true&data_extracao=${dataEscolhida}&horario_extracao=${horarioEscolhido}`
   }
 
@@ -117,6 +123,9 @@ async function buscarExtracao(dataEscolhida, horarioEscolhido, isFederal){
       throw new Error('Não foi possível obter os dados');
     }
     const data = await response.json();
+    if (isTodos){
+      return data;
+    }
     return data[0];
   } catch (error) {
     console.error('Erro:', error);
