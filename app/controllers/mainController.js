@@ -1,3 +1,6 @@
+const service = require('../service/StatusService.js');
+const type = require('./types');
+
 //Mensage de boas vindas 
 async function bemVindo(client, phone, nome){
   await client.sendText(phone,
@@ -75,7 +78,15 @@ async function imprimirHorario(client, phone, dataEscolhida, isMensagem = true){
     mensagem = mensagem + (data.horarios.length + contator) + ' - TODOS'
 
     if (isMensagem == true){
+      //data.horarios.length=0;
+      if(data.horarios.length==0){
+        await client.sendText(phone, "Ainda não foram registradas extrações hoje!\nA primeira extração estará disponível após às 09:45.")
+        service.updateStatus(phone,type.CONFIRMACAO_NOVO_ATENDIMENTO)
+        client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
+      } else{
         client.sendText(phone, mensagem)
+      }
+      
     }else{
       return data
     }

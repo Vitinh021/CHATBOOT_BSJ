@@ -1,7 +1,9 @@
 const express = require('express');
-const controller = require('./maincontroller.js');
+const controller = require('./mainController.js');
 const service = require('../service/StatusService.js');
 const type = require('./types');
+
+require('dotenv').config();
 
 const app = express();
 
@@ -54,7 +56,8 @@ function start(client) {
   let dataEscolhida = null
 
   client.onMessage(async (message) => {
-
+  
+  const telefoneAtendente=process.env.TELEFONE_ATENDENTE;
   var chatId = message.chatId;
   var phone = message.from;
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
@@ -89,6 +92,9 @@ function start(client) {
     }
     
     else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
+      //558799069152@c.us
+      var tel = `(${phone.substring(2, 4)}) 9${phone.substring(4, 8)}-${phone.substring(8, 12)}`;
+      client.sendText(telefoneAtendente, `O cliente ${nome}, de número ${tel} está aguardando por atendimento!`)
       service.updateStatus(phone,type.ATENDIMENTO_FUNCIONARIO)
       controller.iniciaAtendimento(client, phone)
     }
