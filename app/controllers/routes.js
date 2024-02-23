@@ -24,7 +24,7 @@ app.get('/run', async (req, res) => {
       session: "sessionName",
       headless: 'new',
       devtools: false,
-      useChrome: true,
+      useChrome: false,
       debug: false,
       logQR: true,
       puppeteerOptions: puppeteerOptions,
