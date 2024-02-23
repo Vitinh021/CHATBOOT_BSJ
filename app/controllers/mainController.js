@@ -1,5 +1,5 @@
 const service = require('../service/StatusService.js');
-const type = require('./types');
+const type = require('./types.js');
 
 //Mensage de boas vindas 
 async function bemVindo(client, phone, nome){

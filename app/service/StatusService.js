@@ -1,4 +1,4 @@
-const type = require('../controllers/types');
+const type = require('../controllers/types.js');
 
 async function createStatus(phone){
   const agora = new Date();

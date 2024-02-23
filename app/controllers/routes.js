@@ -1,43 +1,72 @@
 const express = require('express');
 const controller = require('./mainController.js');
 const service = require('../service/StatusService.js');
-const type = require('./types');
+const type = require('./types.js');
+const wppconnect = require('@wppconnect-team/wppconnect');
+const puppeteer = require('puppeteer-core');
+const path = require('path');
 
 require('dotenv').config();
+const fs = require('fs');
+
 
 const app = express();
-
-const wppconnect = require('@wppconnect-team/wppconnect');
-console.log(wppconnect)
-
-wppconnect
-.create({
-  session: "sessionName",
-  headless: "new", // Headles  s chrome
-  debug: true,
-  autoClose: false,
-  disableWelcome: true,
-  catchQR: (base64Qr, asciiQR) => {
-    var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-      response = {};
-    if (matches.length !== 3) {
-      return new Error('Invalid input string');
-    }
-    response.type = matches[1];
-    response.data = new Buffer.from(matches[2], 'base64');
-    var imageBuffer = response;
-    require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
-        if (err != null) {
+const puppeteerOptions = {
+  //headless: true, // Se false, o navegador será aberto em uma janela visível
+ // defaultViewport: null, // Permite configurar o tamanho da janela do navegador
+  //args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
+  executablePath: '/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome' // Especifique o caminho do Chrome aqui
+};
+// Inicia o cliente wppconnect quando o servidor Node.js é iniciado
+app.get('/run', async (req, res) => {
+  try {
+    const client = await wppconnect.create({
+      session: "sessionName",
+      headless: 'new',
+      devtools: false,
+      useChrome: true,
+      debug: false,
+      logQR: true,
+      puppeteerOptions: puppeteerOptions,
+      disableWelcome: true,
+      updatesLog: false,
+      autoClose: false,
+      catchQR: (base64Qr, asciiQR) => {
+        console.log("QR code recebido");
+        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
+          response = {};
+        if (matches.length !== 3) {
+          throw new Error('Invalid input string');
         }
+        response.type = matches[1];
+        response.data = new Buffer.from(matches[2], 'base64');
+        var imageBuffer = response;
+        require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
+          res.writeHead(200, {
+            'Content-Type': 'image/png'
+          });
+          res.end(imageBuffer['data']);
+          if (err != null) {
+            throw new Error("Erro ao salvar QR code: " + err);
+          }
+        });
       }
-    );
-  }
-})
-.then((client) => start(client))
-.catch((error) => console.log(error));
+    });
 
-app.get('/iniciar', (req, res) => {
-  const fs = require('fs');
+    // Iniciar a aplicação após a criação do cliente
+    await start(client);
+
+    res.status(200).send("WhatsApp session criada com sucesso!");
+  } catch (error) {
+    console.error("Erro ao criar a sessão do WhatsApp:", error);
+    console.error("Stack Trace:", error.stack);
+    res.status(500).send("Erro ao criar a sessão do WhatsApp: " + JSON.stringify(error.stack));
+  }
+});
+app.get('/env', (req, res) => {
+  res.status(200).send(process.cwd())
+})
+app.get('/qrcode', (req, res) => {
   fs.readFile('out.png', function (error, data) {
     if (error) {
         res.status(500).send('Erro ao ler o arquivo');
