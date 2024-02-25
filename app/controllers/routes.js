@@ -5,6 +5,7 @@ const type = require('./types.js');
 const wppconnect = require('@wppconnect-team/wppconnect');
 const puppeteer = require('puppeteer-core');
 const path = require('path');
+const sharp = require('sharp');
 
 require('dotenv').config();
 const fs = require('fs');
@@ -41,14 +42,24 @@ app.get('/run', async (req, res) => {
         response.type = matches[1];
         response.data = new Buffer.from(matches[2], 'base64');
         var imageBuffer = response;
-        require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
-          res.writeHead(200, {
-            'Content-Type': 'image/png'
+        sharp(imageBuffer['data'])
+        .resize({ width: imageWidth * 2, height: imageHeight * 2 })
+        .toBuffer()
+        .then(newImageBuffer => {
+          // Salvar a nova imagem
+          require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
+            if (err != null) {
+              throw new Error("Erro ao salvar QR code: " + err);
+            } else {
+              res.writeHead(200, {
+                'Content-Type': 'image/png'
+              });
+              res.end(newImageBuffer);
+            }
           });
-          res.end(imageBuffer['data']);
-          if (err != null) {
-            throw new Error("Erro ao salvar QR code: " + err);
-          }
+        })
+        .catch(err => {
+          console.error("Erro ao redimensionar a imagem: ", err);
         });
       }
     });
