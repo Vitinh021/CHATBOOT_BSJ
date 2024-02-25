@@ -55,8 +55,6 @@ app.get('/run', async (req, res) => {
 
     // Iniciar a aplicação após a criação do cliente
     await start(client);
-
-    res.status(200).send("WhatsApp session criada com sucesso!");
   } catch (error) {
     console.error("Erro ao criar a sessão do WhatsApp:", error);
     console.error("Stack Trace:", error.stack);
