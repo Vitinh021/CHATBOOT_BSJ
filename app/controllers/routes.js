@@ -22,15 +22,10 @@ app.get('/run', async (req, res) => {
   try {
     const client = await wppconnect.create({
       session: "sessionName",
-      headless: 'new',
-      devtools: false,
-      useChrome: false,
-      debug: false,
-      logQR: true,
-      puppeteerOptions: puppeteerOptions,
-      disableWelcome: true,
-      updatesLog: false,
+      headless: "new", // Headles  s chrome
+      debug: true,
       autoClose: false,
+      disableWelcome: true,
       catchQR: (base64Qr, asciiQR) => {
         console.log("QR code recebido");
         var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
