@@ -15,7 +15,7 @@ const puppeteerOptions = {
   //headless: true, // Se false, o navegador será aberto em uma janela visível
  // defaultViewport: null, // Permite configurar o tamanho da janela do navegador
   //args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
-  executablePath: '/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome' // Especifique o caminho do Chrome aqui
+  executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
 app.get('/run', async (req, res) => {
@@ -27,7 +27,7 @@ app.get('/run', async (req, res) => {
       useChrome: false,
       debug: false,
       logQR: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      puppeteerOptions: puppeteerOptions,
       disableWelcome: true,
       updatesLog: false,
       autoClose: false,
