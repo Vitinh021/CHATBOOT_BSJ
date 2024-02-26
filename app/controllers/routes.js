@@ -43,16 +43,15 @@ app.get('/run', async (req, res) => {
         response.data = new Buffer.from(matches[2], 'base64');
         var imageBuffer = response;
         // Salvar a nova imagem
-        require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
+        require('fs').writeFile('out.png', imageBuffer['data'], 'binary', function (err) {
+          res.writeHead(200, {
+            'Content-Type': 'image/png'
+          });
+          res.end(imageBuffer['data']);
           if (err != null) {
             throw new Error("Erro ao salvar QR code: " + err);
-          } else {
-            res.writeHead(200, {
-              'Content-Type': 'image/png'
-            });
-            res.end(newImageBuffer);
           }
-        });
+        })
       }
     });
 
