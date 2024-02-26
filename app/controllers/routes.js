@@ -44,7 +44,7 @@ app.get('/run', async (req, res) => {
         var imageBuffer = response;
         // Salvar a nova imagem
         sharp(imageBuffer['data'])
-        .resize({ width: 500, height: 500 }) // Altere o tamanho conforme necessário
+        .resize({ width: 1000, height: 1000 }) // Altere o tamanho conforme necessário
         .toBuffer()
         .then(newImageBuffer => {
             // Salvar a nova imagem
