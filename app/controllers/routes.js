@@ -19,7 +19,7 @@ const puppeteerOptions = {
   executablePath: '/usr/bin/chromium-browser' // Especifique o caminho do Chrome aqui
 };
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
-const client = await wppconnect.create({
+const client = wppconnect.create({
   session: "sessionName",
   headless: 'new',
   devtools: false,
