@@ -22,7 +22,7 @@ async function createStatus(phone){
     body: formData
   };
 
-  fetch(url, options)
+  await fetch(url, options)
     .then(response => {
       response.json().then(res =>{
         console.log(res)
@@ -36,7 +36,7 @@ async function createStatus(phone){
 //
 async function getByPhone(phone){
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone='+phone
-  return fetch(url)
+  return await fetch(url)
   .then(response => {
     if (!response.ok) {
       throw new Error('Network response was not ok.');
