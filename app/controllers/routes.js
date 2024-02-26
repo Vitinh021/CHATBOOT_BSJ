@@ -49,7 +49,7 @@ app.get('/run', async (req, res) => {
           });
           res.end(imageBuffer['data']);
           if (err != null) {
-            throw new Error("Erro ao salvar QR code: " + err);
+            //throw new Error("Erro ao salvar QR code: " + err);
           }
         })
       }
