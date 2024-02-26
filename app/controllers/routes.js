@@ -42,24 +42,16 @@ app.get('/run', async (req, res) => {
         response.type = matches[1];
         response.data = new Buffer.from(matches[2], 'base64');
         var imageBuffer = response;
-        sharp(imageBuffer['data'])
-        .resize({ width: imageWidth * 2, height: imageHeight * 2 })
-        .toBuffer()
-        .then(newImageBuffer => {
-          // Salvar a nova imagem
-          require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
-            if (err != null) {
-              throw new Error("Erro ao salvar QR code: " + err);
-            } else {
-              res.writeHead(200, {
-                'Content-Type': 'image/png'
-              });
-              res.end(newImageBuffer);
-            }
-          });
-        })
-        .catch(err => {
-          console.error("Erro ao redimensionar a imagem: ", err);
+        // Salvar a nova imagem
+        require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
+          if (err != null) {
+            throw new Error("Erro ao salvar QR code: " + err);
+          } else {
+            res.writeHead(200, {
+              'Content-Type': 'image/png'
+            });
+            res.end(newImageBuffer);
+          }
         });
       }
     });
