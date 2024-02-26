@@ -44,20 +44,38 @@ app.get('/run', async (req, res) => {
         var imageBuffer = response;
         // Salvar a nova imagem
         sharp(imageBuffer['data'])
-        .resize({ width: 1000, height: 1000 }) // Altere o tamanho conforme necessário
+        .resize({ width: 500, height: 500 }) // Altere o tamanho conforme necessário
         .toBuffer()
         .then(newImageBuffer => {
             // Salvar a nova imagem
             require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
-                if (err != null) {
-                    throw new Error("Erro ao salvar QR code: " + err);
-                } else {
-                    res.writeHead(200, {
-                        'Content-Type': 'image/png'
-                    });
-                    res.end(newImageBuffer);
-                }
-            });
+              if (err != null) {
+                  throw new Error("Erro ao salvar QR code: " + err);
+              } else {
+                  // Configurar o estilo CSS da página para definir a cor de fundo
+                  const htmlContent = `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                          <style>
+                              body {
+                                  background-color: white; /* Defina a cor de fundo desejada aqui */
+                              }
+                          </style>
+                      </head>
+                      <body>
+                          <img src="data:image/png;base64,${newImageBuffer.toString('base64')}">
+                      </body>
+                      </html>
+                  `;
+
+                  // Enviar a página HTML com a imagem para o cliente
+                  res.writeHead(200, {
+                      'Content-Type': 'text/html'
+                  });
+                  res.end(htmlContent);
+              }
+          });
         })
         .catch(err => {
             console.error("Erro ao redimensionar a imagem: ", err);
