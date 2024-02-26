@@ -1,22 +1,35 @@
 const express = require('express');
 const controller = require('./mainController.js');
 const service = require('../service/StatusService.js');
-const type = require('./types');
+const type = require('./types.js');
+const wppconnect = require('@wppconnect-team/wppconnect');
+const puppeteer = require('puppeteer-core');
+const path = require('path');
+const sharp = require('sharp');
 
 require('dotenv').config();
+const fs = require('fs');
+
 
 const app = express();
-
-const wppconnect = require('@wppconnect-team/wppconnect');
-console.log(wppconnect)
-
-wppconnect
-.create({
+const puppeteerOptions = {
+  headless: true, // Se false, o navegador será aberto em uma janela visível
+  defaultViewport: null, // Permite configurar o tamanho da janela do navegador
+  args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
+  executablePath: '/usr/bin/chromium-browser' // Especifique o caminho do Chrome aqui
+};
+// Inicia o cliente wppconnect quando o servidor Node.js é iniciado
+const client = await wppconnect.create({
   session: "sessionName",
-  headless: "new", // Headles  s chrome
-  debug: true,
-  autoClose: false,
+  headless: 'new',
+  devtools: false,
+  useChrome: false,
+  debug: false,
+  logQR: true,
+  puppeteerOptions: puppeteerOptions,
   disableWelcome: true,
+  updatesLog: false,
+  autoClose: false,
   catchQR: (base64Qr, asciiQR) => {
     var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
       response = {};
