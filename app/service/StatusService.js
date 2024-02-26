@@ -1,4 +1,5 @@
 const type = require('../controllers/types.js');
+const url = 'https://gestaobsj.com.br/Server/status.php';
 
 async function createStatus(phone){
   const agora = new Date();
@@ -16,9 +17,7 @@ async function createStatus(phone){
   formData.append('status', type.BEM_VINDO);
   formData.append('createStatus', true);
 
-  const url = 'https://gestaobsj.com.br/Server/status.php';
-
-  const options = {
+  let options = {
     method: 'POST',
     body: formData
   };
@@ -73,9 +72,7 @@ async function updateStatus(phone, status){
   formData.append('status', status);
   formData.append('updateStatus', true);
 
-  const url = 'https://gestaobsj.com.br/Server/status.php';
-
-  const options = {
+  let options = {
     method: 'POST',
     body: formData
   };
