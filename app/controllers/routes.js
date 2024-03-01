@@ -20,7 +20,10 @@ const puppeteerOptions = {
 };
 
 let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
- fetch(url)
+ fetch(url, {
+  method: 'GET',
+  timeout: 50000
+ })
   .then(response => {
     setTimeout(() => {
       console.log(response);
