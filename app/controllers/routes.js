@@ -27,11 +27,10 @@ app.get('/teste', async (req, res) => {
       throw new Error('Network response was not ok.');
     }
     setTimeout(() => {
-      res.status(200).send(response.json());
+      console.log(response);
     }, 5000)
   })
   .then(data => {
-    res.status(200).send(data);
   })
   .catch(error => {
     console.error('Error:', error);
