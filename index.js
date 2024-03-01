@@ -9,7 +9,7 @@ const routes = require('./app/controllers/routes.js')
 let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
 console.log('deu adasdas')
 
-axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
+axios.get(url, { timeout: 5000000 }) // Definindo o timeout como 50 segundos
   .then(response => {
     console.log('deu certo')
     console.log(response.data);
@@ -17,16 +17,3 @@ axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
   .catch(error => {
     console.error('Error:', error);
   });
-app.get('/teste', async (req, res) => {
-  res.status(200).send('ok');
-  let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
- await fetch(url)
-  .then(response => {
-    setTimeout(() => {
-      console.log(response);
-    }, 5000)
-  })
-  .catch(error => {
-    console.error('Error:', error);
-  });
-})
