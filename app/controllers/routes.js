@@ -18,6 +18,24 @@ const puppeteerOptions = {
   args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
+
+app.get('/teste', async (req, res) => {
+  let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone='+phone
+ fetch(url)
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok.');
+    }
+    res.status(200).send(response.json());
+  })
+  .then(data => {
+    res.status(200).send(data);
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+})
+
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
 app.get('/run', async (req, res) => {
   try {
