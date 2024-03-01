@@ -24,14 +24,9 @@ app.get('/teste', async (req, res) => {
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
  await fetch(url)
   .then(response => {
-    if (!response.ok) {
-      throw new Error('Network response was not ok.');
-    }
     setTimeout(() => {
       console.log(response);
     }, 5000)
-  })
-  .then(data => {
   })
   .catch(error => {
     console.error('Error:', error);
