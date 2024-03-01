@@ -6,6 +6,7 @@ const wppconnect = require('@wppconnect-team/wppconnect');
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const sharp = require('sharp');
+const axios = require('axios');
 
 require('dotenv').config();
 const fs = require('fs');
@@ -21,28 +22,9 @@ const puppeteerOptions = {
 
 let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
 
-// Função para fazer a requisição com timeout
-function fetchWithTimeout(url, options, timeout) {
-  return new Promise((resolve, reject) => {
-    // Inicia a requisição fetch
-    fetch(url, options)
-      .then(resolve)
-      .catch(reject);
-
-    // Define um timeout para a requisição
-    setTimeout(() => {
-      reject(new Error('Timeout'));
-    }, timeout);
-  });
-}
-
-// Faz a requisição com timeout de 50 segundos
-fetchWithTimeout(url, { method: 'GET' }, 50000)
+axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
   .then(response => {
-    return response.json(); // ou response.text(), dependendo do tipo de resposta esperada
-  })
-  .then(data => {
-    console.log(data);
+    console.log(response.data);
   })
   .catch(error => {
     console.error('Error:', error);
