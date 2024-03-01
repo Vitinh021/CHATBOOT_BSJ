@@ -20,7 +20,7 @@ const puppeteerOptions = {
 };
 
 app.get('/teste', async (req, res) => {
-  let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone='+phone
+  let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
  fetch(url)
   .then(response => {
     if (!response.ok) {
