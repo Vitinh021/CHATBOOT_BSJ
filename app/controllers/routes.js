@@ -19,6 +19,17 @@ const puppeteerOptions = {
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 
+let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
+ await fetch(url)
+  .then(response => {
+    setTimeout(() => {
+      console.log(response);
+    }, 5000)
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
