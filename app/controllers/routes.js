@@ -19,20 +19,34 @@ const puppeteerOptions = {
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 
-let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
- fetch(url, {
-  method: 'GET',
-  timeout: 50000
- })
-  .then(response => {
+let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
+
+// Função para fazer a requisição com timeout
+function fetchWithTimeout(url, options, timeout) {
+  return new Promise((resolve, reject) => {
+    // Inicia a requisição fetch
+    fetch(url, options)
+      .then(resolve)
+      .catch(reject);
+
+    // Define um timeout para a requisição
     setTimeout(() => {
-      console.log(response);
-    }, 5000)
+      reject(new Error('Timeout'));
+    }, timeout);
+  });
+}
+
+// Faz a requisição com timeout de 50 segundos
+fetchWithTimeout(url, { method: 'GET' }, 50000)
+  .then(response => {
+    return response.json(); // ou response.text(), dependendo do tipo de resposta esperada
+  })
+  .then(data => {
+    console.log(data);
   })
   .catch(error => {
     console.error('Error:', error);
   });
-
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
