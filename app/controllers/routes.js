@@ -26,7 +26,9 @@ app.get('/teste', (req, res) => {
     if (!response.ok) {
       throw new Error('Network response was not ok.');
     }
-    res.status(200).send(response.json());
+    setTimeout(() => {
+      res.status(200).send(response.json());
+    }, 5000)
   })
   .then(data => {
     res.status(200).send(data);
