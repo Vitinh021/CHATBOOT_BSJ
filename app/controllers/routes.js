@@ -19,9 +19,9 @@ const puppeteerOptions = {
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 
-app.get('/teste', (req, res) => {
+app.get('/teste', async (req, res) => {
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
- fetch(url)
+ await fetch(url)
   .then(response => {
     if (!response.ok) {
       throw new Error('Network response was not ok.');
@@ -36,6 +36,7 @@ app.get('/teste', (req, res) => {
   .catch(error => {
     console.error('Error:', error);
   });
+  res.status(200).send('ok');
 })
 
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
