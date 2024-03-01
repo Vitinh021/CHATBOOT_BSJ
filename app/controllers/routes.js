@@ -20,6 +20,7 @@ const puppeteerOptions = {
 };
 
 app.get('/teste', async (req, res) => {
+  res.status(200).send('ok');
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
  await fetch(url)
   .then(response => {
@@ -35,7 +36,6 @@ app.get('/teste', async (req, res) => {
   .catch(error => {
     console.error('Error:', error);
   });
-  res.status(200).send('ok');
 })
 
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
