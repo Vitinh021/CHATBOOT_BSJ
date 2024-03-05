@@ -36,26 +36,13 @@ axios.get(url, {headers}) // Definindo o timeout como 50 segundos
   })
   .catch(error => {
     console.error('Error:', error);
-    // Converte o objeto JSON em uma string
-var jsonString = JSON.stringify(error, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
+    const jsonString = JSON.stringify(error, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
 
-// Cria um objeto Blob contendo a string JSON
-var blob = new Blob([jsonString], { type: "text/plain;charset=utf-8" });
+// Caminho do arquivo onde os dados serão salvos
+const arquivo = 'dados.json';
 
-// Cria um objeto URL temporário para o Blob
-var url = URL.createObjectURL(blob);
-
-// Cria um link de download
-var link = document.createElement("a");
-link.href = url;
-link.download = "dados.json";
-
-// Simula um clique no link para iniciar o download
-document.body.appendChild(link);
-link.click();
-
-// Limpa o objeto URL temporário
-URL.revokeObjectURL(url);
+// Escreve os dados JSON no arquivo
+fs.writeFileSync(arquivo, jsonString);
   });
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
