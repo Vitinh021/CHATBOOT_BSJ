@@ -27,7 +27,7 @@ axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
     console.log("Response: " + response.data);
   })
   .catch(error => {
-    console.error('Error:', error);
+    console.error('Error:', error.message);
   });
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
