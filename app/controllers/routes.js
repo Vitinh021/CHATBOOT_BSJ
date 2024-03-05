@@ -24,7 +24,7 @@ let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
 
 axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
   .then(response => {
-    console.log(response.data);
+    console.log("Response: " + response.data);
   })
   .catch(error => {
     console.error('Error:', error);
