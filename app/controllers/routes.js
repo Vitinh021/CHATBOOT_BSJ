@@ -21,13 +21,20 @@ const puppeteerOptions = {
 };
 
 let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
-
-axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
+const headers = {
+  'Content-Type': 'application/json', // Tipo de conteúdo
+  'Accept': 'application/json', // Formato que a API deve retornar
+  'Cache-Control': 'no-cache', // Controle de cache
+  'Connection': 'keep-alive', // Cookies
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Accept': '*/*'
+}
+axios.get(url, {headers}) // Definindo o timeout como 50 segundos
   .then(response => {
     console.log("Response: " + response.data);
   })
   .catch(error => {
-    console.error('Error:', error.message);
+    console.error('Error:', error);
   });
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
