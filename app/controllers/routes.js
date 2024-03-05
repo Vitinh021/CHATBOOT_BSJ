@@ -24,7 +24,7 @@ let url = 'https://httpbin.org/get';
 
 axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
   .then(response => {
-    console.log("Response: " + response.data);
+    console.log("Response: " + response);
   })
   .catch(error => {
     console.error('Error :', error);
