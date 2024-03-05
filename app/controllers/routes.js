@@ -27,7 +27,8 @@ const headers = {
   'Cache-Control': 'no-cache', // Controle de cache
   'Connection': 'keep-alive', // Cookies
   'Accept-Encoding': 'gzip, deflate, br',
-  'Accept': '*/*'
+  'Accept': '*/*',
+  'Keep-Alive': 'timeout=5'
 }
 axios.get(url, {headers}) // Definindo o timeout como 50 segundos
   .then(response => {
