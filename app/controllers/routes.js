@@ -20,14 +20,15 @@ const puppeteerOptions = {
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 
-let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
+let url = 'https://httpbin.org/get';
 
 axios.get(url, { timeout: 50000 }) // Definindo o timeout como 50 segundos
   .then(response => {
     console.log("Response: " + response.data);
   })
   .catch(error => {
-    console.error('Error:', error);
+    console.error('Error :', error);
+    console.error('Error message:', error.message);
   });
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
