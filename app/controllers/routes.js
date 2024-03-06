@@ -134,8 +134,13 @@ function start(client) {
   var phone = message.from;
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
   var status 
-  console.log(message, isGroupMsg);
-  console.log("É do grupo: " + message?.isGroupMsg);
+  const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
+
+  // Caminho do arquivo onde os dados serão salvos
+  const arquivo = 'dados.json';
+  
+  // Escreve os dados JSON no arquivo
+  fs.writeFileSync(arquivo, jsonString);
 
   await service.getByPhone(phone)
     .then((data)=>{
