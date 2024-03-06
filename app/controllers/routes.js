@@ -133,7 +133,6 @@ function start(client) {
   var chatId = message.chatId;
   var phone = message.from;
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
-  var isGrup = message.isGroupMsg;
   var status 
   const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
 
@@ -145,7 +144,6 @@ function start(client) {
   await service.getByPhone(phone)
     .then((data)=>{
       if (data){//se existir
-        console.log("É grupoaaaa:  " + isGrup, phone);
         status = data.status
         var dataServer = new Date(data.data_hora);
         var dataAtual = new Date();
