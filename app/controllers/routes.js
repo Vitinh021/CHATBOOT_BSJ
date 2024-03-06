@@ -20,30 +20,6 @@ const puppeteerOptions = {
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 
-let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8';
-const headers = {
-  'Content-Type': 'application/json', // Tipo de conteúdo
-  'Accept': 'application/json', // Formato que a API deve retornar
-  'Cache-Control': 'no-cache', // Controle de cache
-  'Connection': 'keep-alive', // Cookies
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Accept': '*/*',
-  'Keep-Alive': 'timeout=5'
-}
-axios.get(url, {headers}) // Definindo o timeout como 50 segundos
-  .then(response => {
-    console.log("Response: " + response.data);
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    const jsonString = JSON.stringify(error, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
-
-// Caminho do arquivo onde os dados serão salvos
-const arquivo = 'dados.json';
-
-// Escreve os dados JSON no arquivo
-fs.writeFileSync(arquivo, jsonString);
-  });
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone=8'
@@ -153,7 +129,7 @@ function start(client) {
   let dataEscolhida = null
 
   client.onMessage(async (message) => {
-  
+  console.log(message);
   const telefoneAtendente=process.env.TELEFONE_ATENDENTE;
   var chatId = message.chatId;
   var phone = message.from;
