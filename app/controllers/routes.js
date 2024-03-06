@@ -129,12 +129,12 @@ function start(client) {
   let dataEscolhida = null
 
   client.onMessage(async (message) => {
-  console.log(message);
   const telefoneAtendente=process.env.TELEFONE_ATENDENTE;
   var chatId = message.chatId;
   var phone = message.from;
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
   var status 
+  console.log(message);
 
   await service.getByPhone(phone)
     .then((data)=>{
