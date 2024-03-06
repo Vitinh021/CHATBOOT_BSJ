@@ -135,7 +135,7 @@ function start(client) {
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
   var status 
   console.log(message, isGroupMsg);
-  console.log("É do grupo: " + message.isGroupMsg);
+  console.log("É do grupo: " + message?.isGroupMsg);
 
   await service.getByPhone(phone)
     .then((data)=>{
