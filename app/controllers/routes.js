@@ -133,19 +133,19 @@ function start(client) {
   var chatId = message.chatId;
   var phone = message.from;
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
-  //var isGrup = message.isGroupMsg;
+  var isGrup = message.isGroupMsg;
   var status 
   const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
 
   // Caminho do arquivo onde os dados serão salvos
   const arquivo = 'dados.json';
-  console.log("É grupoaaaa:  " + phone);
   // Escreve os dados JSON no arquivo
   await fs.writeFileSync(arquivo, jsonString);
 
   await service.getByPhone(phone)
     .then((data)=>{
       if (data){//se existir
+        console.log("É grupoaaaa:  " + isGrup, phone);
         status = data.status
         var dataServer = new Date(data.data_hora);
         var dataAtual = new Date();
