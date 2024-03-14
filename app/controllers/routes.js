@@ -133,18 +133,20 @@ function start(client) {
   var chatId = message.chatId;
   var phone = message.from;
   var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
-  var status 
-  const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
+  var status = '';
+  var id_cliente_banco = 0;
+ // const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
 
   // Caminho do arquivo onde os dados serão salvos
-  const arquivo = 'dados.json';
+ // const arquivo = 'dados.json';
   // Escreve os dados JSON no arquivo
-  await fs.writeFileSync(arquivo, jsonString);
+  //await fs.writeFileSync(arquivo, jsonString);
 
   await service.getByPhone(phone)
     .then((data)=>{
       if (data){//se existir
-        status = data.status
+        status = data.status;
+        id_cliente_banco = data.id;
         var dataServer = new Date(data.data_hora);
         var dataAtual = new Date();
         var diferenca_tempo = 10 * 60 * 1000; // 10 minutos em milissegundos
@@ -159,7 +161,13 @@ function start(client) {
     })
 
     let opcaoNumero = parseInt(message.body)
-    if (status == type.BEM_VINDO && message.body != '') {
+    if (telefoneAtendente == phone) {
+      if (!isNaN(message.body) && Number.isInteger(parseInt(message.body))) {
+        service.updateStatus(message.body,type.BEM_VINDO)
+      }
+    }
+
+    else if (status == type.BEM_VINDO && message.body != '') {
       controller.bemVindo(client, phone, nome)
       service.updateStatus(phone,type.ESCOLHA_ATENDIMENTO)
     }
@@ -172,7 +180,7 @@ function start(client) {
     else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
       //558799069152@c.us
       var tel = `(${phone.substring(2, 4)}) 9${phone.substring(4, 8)}-${phone.substring(8, 12)}`;
-      client.sendText(telefoneAtendente, `O cliente ${nome}, de número ${tel} está aguardando por atendimento!`)
+      client.sendText(telefoneAtendente, `O cliente ${nome}, de número *${tel}* e código *${id_cliente_banco}* está aguardando por atendimento!`)
       service.updateStatus(phone,type.ATENDIMENTO_FUNCIONARIO)
       controller.iniciaAtendimento(client, phone)
     }
