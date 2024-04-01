@@ -15,7 +15,7 @@ async function bemVindo(client, phone, nome){
 //imprime as datas disponiveis para escolher o horario em seguida
 function imprimirDatas(client, phone) {
   let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
-  var datasAnteriores = [];
+  //var datasAnteriores = [];
   var dataAtual = new Date();
   var cont = 0
 
@@ -32,7 +32,7 @@ function imprimirDatas(client, phone) {
     text = text + '\n' + cont + ' - '+ dia + '/' + mes + '/' + ano
   }  
   
-  
+  client.sendText(phone, text)
   /*let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
     
     const today = new Date();
