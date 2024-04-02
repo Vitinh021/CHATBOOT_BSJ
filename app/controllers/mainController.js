@@ -40,10 +40,10 @@ function getData(opcao){
     let listaDatas = []
     const today = new Date();
     
-    for (let i = 1; i < 11; i++) {
+    for (let i = 0; i < 10; i++) {
         const previousDate = new Date(today);
         previousDate.setDate(today.getDate() - i);
-        let dia = (previousDate.getDate() + 1).toString().padStart(2, '0')
+        let dia = (previousDate.getDate()).toString().padStart(2, '0')
         let mes = (previousDate.getMonth() + 1).toString().padStart(2, '0')
         let ano = previousDate.getFullYear()
         const formattedDate = `${ano}-${mes}-${dia}`;
