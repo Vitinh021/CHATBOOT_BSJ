@@ -17,11 +17,11 @@ function imprimirDatas(client, phone) {
     let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
     
     const today = new Date();
-    for (let i = 1; i < 11; i++) {
+    for (let i = 0; i < 10; i++) {
         const previousDate = new Date(today);
         previousDate.setDate(today.getDate() - i);
-        const formattedDate = `${(previousDate.getDate() + 1).toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
-        text = text + '\n' + i + ' - '+ formattedDate
+        const formattedDate = `${(previousDate.getDate()).toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
+        text = text + '\n' + (i+1) + ' - '+ formattedDate
     }
     client.sendText(phone, text)
 }

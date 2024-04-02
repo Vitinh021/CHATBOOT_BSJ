@@ -128,117 +128,121 @@ function start(client) {
 
   let dataEscolhida = null
 
-  client.onMessage(async (message) => {
-  const telefoneAtendente=process.env.TELEFONE_ATENDENTE;
-  var chatId = message.chatId;
-  var phone = message.from;
-  var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
-  var status = '';
-  var id_cliente_banco = 0;
- // const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
+  client.onMessage(async (message) => {    
+      const telefoneAtendente=process.env.TELEFONE_ATENDENTE;
+      var chatId = message.chatId;
+      var phone = message.from;
+      var nome  = message.notifyName.split(' ')[0] ?? 'Usuário';
+      var status = '';
+      var id_cliente_banco = 0;
+      // const jsonString = JSON.stringify(message, null, 2); // O segundo parâmetro é para formatação e o terceiro é o espaçamento de indentação
 
-  // Caminho do arquivo onde os dados serão salvos
- // const arquivo = 'dados.json';
-  // Escreve os dados JSON no arquivo
-  //await fs.writeFileSync(arquivo, jsonString);
-
-  await service.getByPhone(phone)
-    .then((data)=>{
-      if (data){//se existir
-        status = data.status;
-        id_cliente_banco = data.id;
-        var dataServer = new Date(data.data_hora);
-        var dataAtual = new Date();
-        var diferenca_tempo = 10 * 60 * 1000; // 10 minutos em milissegundos
-        if (dataAtual - dataServer >= diferenca_tempo) {
-            service.updateStatus(phone,type.BEM_VINDO)
+      // Caminho do arquivo onde os dados serão salvos
+      // const arquivo = 'dados.json';
+      // Escreve os dados JSON no arquivo
+      //await fs.writeFileSync(arquivo, jsonString);
+    if (phone != 'status@broadcast') {
+      await service.getByPhone(phone)
+        .then((data)=>{
+          if (data){//se existir
+            status = data.status;
+            id_cliente_banco = data.id;
+            var dataServer = new Date(data.data_hora);
+            var dataAtual = new Date();
+            var diferenca_tempo = 10 * 60 * 1000; // 10 minutos em milissegundos
+            if (dataAtual - dataServer >= diferenca_tempo) {
+                service.updateStatus(phone,type.BEM_VINDO)
+                status = type.BEM_VINDO
+            } 
+          }else{
+            service.createStatus(phone)
             status = type.BEM_VINDO
-        } 
-      }else{
-        service.createStatus(phone)
-        status = type.BEM_VINDO
-      }
-    })
-
-    let opcaoNumero = parseInt(message.body)
-    if (telefoneAtendente == phone) {
-      if (!isNaN(message.body) && Number.isInteger(parseInt(message.body))) {
-        service.updateStatus(message.body,type.BEM_VINDO)
-      }
-    }
-
-    else if (status == type.BEM_VINDO && message.body != '') {
-      controller.bemVindo(client, phone, nome)
-      service.updateStatus(phone,type.ESCOLHA_ATENDIMENTO)
-    }
-      
-    else if (status == type.ESCOLHA_ATENDIMENTO && message.body == '1') {
-      service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_DATA)
-      controller.imprimirDatas(client, phone)
-    }
-    
-    else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
-      //558799069152@c.us
-      var tel = `(${phone.substring(2, 4)}) 9${phone.substring(4, 8)}-${phone.substring(8, 12)}`;
-      client.sendText(telefoneAtendente, `O cliente ${nome}, de número *${tel}* e código *${id_cliente_banco}* está aguardando por atendimento!`)
-      service.updateStatus(phone,type.ATENDIMENTO_FUNCIONARIO)
-      controller.iniciaAtendimento(client, phone)
-    }
-    
-    else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_DATA)){
-        dataEscolhida = controller.getData(opcaoNumero)            
-        controller.imprimirHorario(client, phone, dataEscolhida)
-        service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_HORA)
-    }
-    
-    else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_HORA)){
-
-      controller.getHorario(client, phone, opcaoNumero, dataEscolhida)
-        .then((horarioEscolhido) => {
-          controller.buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'), (horarioEscolhido == 'TODOS'))
-           .then(async data => {
-            if (data){
-              
-              if (horarioEscolhido == 'TODOS'){
-                let mensagem_grande = ''
-                await data.forEach((obj, index) => {
-                  mensagem_grande = mensagem_grande + controller.mensagemResultado(obj) + '\n' + (index == data.length-1?'':'\n')
-                  console.log(index,data.length)
-                  console.log("-----------------------------------------------------------------------")
-                  console.log(obj)
-                });
-                await client.sendText(phone, mensagem_grande)
-              }else{
-                await client.sendText(phone, controller.mensagemResultado(data))
-              }
-
-              service.updateStatus(phone,type.CONFIRMACAO_NOVO_ATENDIMENTO)
-              client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
-            }
-            else{
-              throw new Error("Opção inválida! A opcao vai até 10.")
-            }
-          })
-
-          .catch(error => {
-            client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
-            console.error('Erro ao obter dados:', error.message);
-          })
+          }
         })
+
+        let opcaoNumero = parseInt(message.body)
+        if (telefoneAtendente == phone) {
+          if (!isNaN(message.body) && Number.isInteger(parseInt(message.body))) {
+            service.updateStatus(message.body,type.BEM_VINDO)
+          }
+        }
+
+        else if (status == type.BEM_VINDO && message.body != '') {
+          controller.bemVindo(client, phone, nome)
+          service.updateStatus(phone,type.ESCOLHA_ATENDIMENTO)
+        }
+          
+        else if (status == type.ESCOLHA_ATENDIMENTO && message.body == '1') {
+          service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_DATA)
+          controller.imprimirDatas(client, phone)
+        }
+        
+        else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
+          //558799069152@c.us
+          var tel = `(${phone.substring(2, 4)}) 9${phone.substring(4, 8)}-${phone.substring(8, 12)}`;
+          client.sendText(telefoneAtendente, `O cliente ${nome}, de número *${tel}* e código *${id_cliente_banco}* está aguardando por atendimento!`)
+          service.updateStatus(phone,type.ATENDIMENTO_FUNCIONARIO)
+          controller.iniciaAtendimento(client, phone)
+        }
+        
+        else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_DATA)){
+            dataEscolhida = controller.getData(opcaoNumero)            
+            controller.imprimirHorario(client, phone, dataEscolhida)
+            service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_HORA)
+        }
+        
+        else if ((opcaoNumero != NaN) && (opcaoNumero >= 1 && opcaoNumero <= 10) && (status == type.ATENDIMENTO_EXTRACAO_HORA)){
+
+          controller.getHorario(client, phone, opcaoNumero, dataEscolhida)
+            .then((horarioEscolhido) => {
+              controller.buscarExtracao(dataEscolhida, horarioEscolhido, (horarioEscolhido == 'FEDERAL'), (horarioEscolhido == 'TODOS'))
+                .then(async data => {
+                if (data){
+                  
+                  if (horarioEscolhido == 'TODOS'){
+                    let mensagem_grande = ''
+                    await data.forEach((obj, index) => {
+                      mensagem_grande = mensagem_grande + controller.mensagemResultado(obj) + '\n' + (index == data.length-1?'':'\n')
+                      console.log(index,data.length)
+                      console.log("-----------------------------------------------------------------------")
+                      console.log(obj)
+                    });
+                    await client.sendText(phone, mensagem_grande)
+                  }else{
+                    await client.sendText(phone, controller.mensagemResultado(data))
+                  }
+
+                  service.updateStatus(phone,type.CONFIRMACAO_NOVO_ATENDIMENTO)
+                  client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
+                }
+                else{
+                  throw new Error("Opção inválida! A opcao vai até 10.")
+                }
+              })
+
+              .catch(error => {
+                client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+                console.error('Erro ao obter dados:', error.message);
+              })
+            })
+        }
+          
+        else if(status == type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='1'){
+          controller.imprimirDatas(client, phone)
+          service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_DATA)
+        }
+          
+        else if((status==type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='2') || message.body=='0'){
+          service.updateStatus(phone,type.BEM_VINDO)
+          controller.finalizarAtendimento(client, phone)
+        }
+        
+        else if(status != type.ATENDIMENTO_FUNCIONARIO){
+          client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+        }
     }
-      
-    else if(status == type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='1'){
-      controller.imprimirDatas(client, phone)
-      service.updateStatus(phone,type.ATENDIMENTO_EXTRACAO_DATA)
-    }
-      
-    else if((status==type.CONFIRMACAO_NOVO_ATENDIMENTO && message.body=='2') || message.body=='0'){
-      service.updateStatus(phone,type.BEM_VINDO)
-      controller.finalizarAtendimento(client, phone)
-    }
-    
-    else if(status != type.ATENDIMENTO_FUNCIONARIO){
-      client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+    else {
+      console.log("broadcast");
     }
   }); 
 }
