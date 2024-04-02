@@ -14,7 +14,7 @@ async function bemVindo(client, phone, nome){
 
 //imprime as datas disponiveis para escolher o horario em seguida
 function imprimirDatas(client, phone) {
-  let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
+  /*let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
   //var datasAnteriores = [];
   var dataAtual = new Date();
   var cont = 0
@@ -32,17 +32,20 @@ function imprimirDatas(client, phone) {
     text = text + '\n' + cont + ' - '+ dia + '/' + mes + '/' + ano
   }  
   
-  client.sendText(phone, text)
-  /*let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
+  client.sendText(phone, text)*/
+  let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
     
     const today = new Date();
     for (let i = 1; i < 11; i++) {
         const previousDate = new Date(today);
         previousDate.setDate(today.getDate() - i);
         const formattedDate = `${(previousDate.getDate() + 1).toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
+        if(/32/.test(formattedDate)){
+        	formattedDate = "01/" + (previousDate.getMonth() + 2).toString().padStart(2, '0') + "/" + (previousDate.getFullYear())       
+        }
         text = text + '\n' + i + ' - '+ formattedDate
     }
-    client.sendText(phone, text)*/
+    client.sendText(phone, text);
 }
 
 //inicia atendimento com o funcionario
@@ -65,7 +68,10 @@ function getData(opcao){
         let dia = (previousDate.getDate() + 1).toString().padStart(2, '0')
         let mes = (previousDate.getMonth() + 1).toString().padStart(2, '0')
         let ano = previousDate.getFullYear()
-        const formattedDate = `${ano}-${mes}-${dia}`;
+        let formattedDate = `${ano}-${mes}-${dia}`;
+        if(/32/.test(formattedDate)){
+        	formattedDate = `${ano}-${(previousDate.getMonth() + 2).toString().padStart(2, '0')}-01`;
+        }
         listaDatas.push(formattedDate)
     }
     return listaDatas[opcao-1]
