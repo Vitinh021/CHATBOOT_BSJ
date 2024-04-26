@@ -45,6 +45,7 @@ app.get('/run', async (req, res) => {
       useChrome: false,
       debug: false,
       logQR: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
       //puppeteerOptions: puppeteerOptions,
       disableWelcome: true,
       updatesLog: false,
