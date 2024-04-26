@@ -40,7 +40,7 @@ app.get('/run', async (req, res) => {
   try {
     const client = await wppconnect.create({
       session: "sessionName",
-      headless: true,
+      headless: 'new',
       devtools: false,
       useChrome: false,
       debug: false,
