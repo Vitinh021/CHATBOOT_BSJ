@@ -48,7 +48,7 @@ app.get('/run', async (req, res) => {
       puppeteerOptions: puppeteerOptions,
       disableWelcome: true,
       updatesLog: false,
-      autoClose: false,
+      autoClose: 100000,
       
     });
 
