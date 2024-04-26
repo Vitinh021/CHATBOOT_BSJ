@@ -18,8 +18,8 @@ const puppeteerOptions = {
   defaultViewport: null, // Permite configurar o tamanho da janela do navegador
   args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
   //executablePath: '/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome' // Especifique o caminho do Chrome aqui
-  //executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
-};
+  executablePath: '/root/.cache/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
+};                 ///root/.cache/chrome-headless-shell/linux-124.0.6367.91/chrome-headless-shell-linux64/chrome-headless-shell
 
 app.get('/teste', async (req, res) => {
   res.status(200).send('ok');
@@ -42,7 +42,7 @@ app.get('/run', async (req, res) => {
       session: "sessionName",
       headless: 'new',
       devtools: false,
-      useChrome: true,
+      useChrome: false,
       debug: false,
       logQR: true,
       puppeteerOptions: puppeteerOptions,
