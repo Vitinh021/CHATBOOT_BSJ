@@ -42,61 +42,13 @@ app.get('/run', async (req, res) => {
       session: "sessionName",
       headless: 'new',
       devtools: false,
-      useChrome: false,
-      debug: false,
+      useChrome: true,
+      debug: true,
       logQR: true,
       disableWelcome: true,
       updatesLog: false,
       autoClose: false,
-      catchQR: ((base64Qr, asciiQR) => {
-        console.log("QR code recebido");
-        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-          response = {};
-        if (matches.length !== 3) {
-          throw new Error('Invalid input string');
-        }
-        response.type = matches[1];
-        response.data = new Buffer.from(matches[2], 'base64');
-        var imageBuffer = response;
-        // Salvar a nova imagem
-        sharp(imageBuffer['data'])
-        .resize({ width: 500, height: 500 }) // Altere o tamanho conforme necessário
-        .toBuffer()
-        .then(newImageBuffer => {
-            // Salvar a nova imagem
-            require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
-              if (err != null) {
-                  throw new Error("Erro ao salvar QR code: " + err);
-              } else {
-                  // Configurar o estilo CSS da página para definir a cor de fundo
-                  const htmlContent = `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                          <style>
-                              body {
-                                  background-color: white; /* Defina a cor de fundo desejada aqui */
-                              }
-                          </style>
-                      </head>
-                      <body>
-                          <img src="data:image/png;base64,${newImageBuffer.toString('base64')}">
-                      </body>
-                      </html>
-                  `;
-
-                  // Enviar a página HTML com a imagem para o cliente
-                  res.writeHead(200, {
-                      'Content-Type': 'text/html'
-                  });
-                  res.end(htmlContent);
-              }
-          });
-        })
-        .catch(err => {
-            console.error("Erro ao redimensionar a imagem: ", err);
-        });
-      }),
+     
       statusFind: (statusSession, session) => {
         console. og('Sessão de status: ', statusSession); //return está logado ™️s não está logado/no navegador. Fechamento &qrReadSuccess ├qrReadFail 「AutocloseCalled 「desconectadaMobile ├deleteToken
         ///criar sessão wss return servidor "serverClose" para fechar
