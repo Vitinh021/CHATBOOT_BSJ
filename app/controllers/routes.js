@@ -104,7 +104,7 @@ app.get('/run', async (req, res) => {
       },
       browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
       puppeteerOptions: {}, // Será passado para puppeteer. aperte
-      logQR: verdadeiro, // Atualiza automaticamente as informações no terminal
+      logQR: true, // Atualiza automaticamente as informações no terminal
     }).catch(err => {
       console.error("Erro ao redimensionar a imagem: ", err);
     });
