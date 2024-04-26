@@ -45,7 +45,6 @@ app.get('/run', async (req, res) => {
       useChrome: false,
       debug: false,
       logQR: true,
-      puppeteerOptions: puppeteerOptions,
       disableWelcome: true,
       updatesLog: false,
       autoClose: false,
@@ -97,7 +96,15 @@ app.get('/run', async (req, res) => {
         .catch(err => {
             console.error("Erro ao redimensionar a imagem: ", err);
         });
-      })
+      }),
+      statusFind: (statusSession, sessão) => {
+        console. og('Sessão de status: ', statusSessão); //return está logado ™️s não está logado/no navegador. Fechamento &qrReadSuccess ├qrReadFail 「AutocloseCalled 「desconectadaMobile ├deleteToken
+        ///criar sessão wss return servidor "serverClose" para fechar
+        console. og('Nome da sessão: ', sessão);
+      },
+      browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
+      puppeteerOptions: {}, // Será passado para puppeteer. aperte
+      logQR: verdadeiro, // Atualiza automaticamente as informações no terminal
     }).catch(err => {
       console.error("Erro ao redimensionar a imagem: ", err);
     });
