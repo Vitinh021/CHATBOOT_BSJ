@@ -13,7 +13,6 @@ const fs = require('fs');
 
 const app = express();
 const puppeteerOptions = {
-  headless: true, // Se false, o navegador será aberto em uma janela visível
   defaultViewport: null, // Permite configurar o tamanho da janela do navegador
   args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
   //executablePath: '/usr/bin/chromium-browser' // Especifique o caminho do Chrome aqui
