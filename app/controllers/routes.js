@@ -64,6 +64,8 @@ app.get('/run', async (req, res) => {
         );
       },
       logQR: false,
+      browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
+
     }).then((res) =>{
       console.log(res);
     }).catch(err => {
