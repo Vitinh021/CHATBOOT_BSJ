@@ -28,7 +28,7 @@ const client = wppconnect.create({
   useChrome: false,
   debug: false,
   logQR: true,
-  puppeteerOptions: puppeteerOptions,
+  //puppeteerOptions: puppeteerOptions,
   disableWelcome: true,
   updatesLog: false,
   autoClose: false,
