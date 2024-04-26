@@ -14,9 +14,9 @@ const fs = require('fs');
 
 const app = express();
 const puppeteerOptions = {
-  headless: true, // Se false, o navegador será aberto em uma janela visível
+  headless: 'new', // Se false, o navegador será aberto em uma janela visível
   defaultViewport: null, // Permite configurar o tamanho da janela do navegador
-  args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
+  args: ['--no-sandbox', '--disable-setuid-sandbox', '--dump-dom'], // Argumentos adicionais para o Chrome/Chromium
   executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
 
@@ -39,7 +39,7 @@ app.get('/run', async (req, res) => {
   try {
     const client = await wppconnect.create({
       session: "sessionName",
-      headless: true,
+      headless: 'new',
       devtools: false,
       useChrome: true,
       debug: false,
