@@ -14,7 +14,7 @@ const fs = require('fs');
 
 const app = express();
 const puppeteerOptions = {
-  headless: 'new', // Se false, o navegador será aberto em uma janela visível
+  headless: true, // Se false, o navegador será aberto em uma janela visível
   defaultViewport: null, // Permite configurar o tamanho da janela do navegador
   args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
   executablePath: '/root/CHATBOOT_BSJ/chrome-headless-shell/linux-120.0.6098.0/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
@@ -97,9 +97,9 @@ app.get('/run', async (req, res) => {
         .catch(err => {
             console.error("Erro ao redimensionar a imagem: ", err);
         });
-      }).catch(err => {
-        console.log('Erooooooooooooooo: ', err);
       })
+    }).catch(err => {
+      console.error("Erro ao redimensionar a imagem: ", err);
     });
 
     // Iniciar a aplicação após a criação do cliente
