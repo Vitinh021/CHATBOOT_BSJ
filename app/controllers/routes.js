@@ -97,10 +97,10 @@ app.get('/run', async (req, res) => {
             console.error("Erro ao redimensionar a imagem: ", err);
         });
       }),
-      statusFind: (statusSession, sessão) => {
-        console. og('Sessão de status: ', statusSessão); //return está logado ™️s não está logado/no navegador. Fechamento &qrReadSuccess ├qrReadFail 「AutocloseCalled 「desconectadaMobile ├deleteToken
+      statusFind: (statusSession, session) => {
+        console. og('Sessão de status: ', statusSession); //return está logado ™️s não está logado/no navegador. Fechamento &qrReadSuccess ├qrReadFail 「AutocloseCalled 「desconectadaMobile ├deleteToken
         ///criar sessão wss return servidor "serverClose" para fechar
-        console. og('Nome da sessão: ', sessão);
+        console. og('Nome da sessão: ', session);
       },
       browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
       puppeteerOptions: {}, // Será passado para puppeteer. aperte
