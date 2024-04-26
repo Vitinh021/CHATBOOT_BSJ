@@ -39,24 +39,33 @@ app.get('/teste', async (req, res) => {
 app.get('/run', async (req, res) => {
   try {
     const client = await wppconnect.create({
-      session: "sessionName",
-      headless: 'new',
-      devtools: false,
-      useChrome: true,
-      debug: true,
-      logQR: true,
-      disableWelcome: true,
-      updatesLog: false,
-      autoClose: false,
-     
-      statusFind: (statusSession, session) => {
-        console. og('Sessão de status: ', statusSession); //return está logado ™️s não está logado/no navegador. Fechamento &qrReadSuccess ├qrReadFail 「AutocloseCalled 「desconectadaMobile ├deleteToken
-        ///criar sessão wss return servidor "serverClose" para fechar
-        console. og('Nome da sessão: ', session);
+      session: 'sessionName',
+      catchQR: (base64Qr, asciiQR) => {
+        console.log(asciiQR); // Optional to log the QR in the terminal
+        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
+          response = {};
+  
+        if (matches.length !== 3) {
+          return new Error('Invalid input string');
+        }
+        response.type = matches[1];
+        response.data = new Buffer.from(matches[2], 'base64');
+  
+        var imageBuffer = response;
+        require('fs').writeFile(
+          'out.png',
+          imageBuffer['data'],
+          'binary',
+          function (err) {
+            if (err != null) {
+              console.log(err);
+            }
+          }
+        );
       },
-      browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
-      puppeteerOptions: {}, // Será passado para puppeteer. aperte
-      logQR: true, // Atualiza automaticamente as informações no terminal
+      logQR: false,
+    }).then((res) =>{
+      console.log(res);
     }).catch(err => {
       console.error("Erro ao redimensionar a imagem: ", err);
     });
