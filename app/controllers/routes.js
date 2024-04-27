@@ -14,9 +14,9 @@ const fs = require('fs');
 
 const app = express();
 const puppeteerOptions = {
-  headless: 'new', // Se false, o navegador será aberto em uma janela visível
+  headless: true, // Se false, o navegador será aberto em uma janela visível
   defaultViewport: null, // Permite configurar o tamanho da janela do navegador
-  args: ['--no-sandbox', '--disable-setuid-sandbox', '--dump-dom'], // Argumentos adicionais para o Chrome/Chromium
+  args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
   executablePath: '/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome' // Especifique o caminho do Chrome aqui
   //executablePath: '/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell' // Especifique o caminho do Chrome aqui
 };
@@ -39,69 +39,41 @@ app.get('/teste', async (req, res) => {
 app.get('/run', async (req, res) => {
   try {
     const client = await wppconnect.create({
-      session: "sessionName",
-      headless: 'new',
-      devtools: false,
-      useChrome: true,
-      debug: false,
-      logQR: true,
-      puppeteerOptions: puppeteerOptions,
-      disableWelcome: true,
-      updatesLog: false,
-      autoClose: false,
+      session: 'sessionName',
       catchQR: (base64Qr, asciiQR) => {
-        console.log("QR code recebido");
+        console.log(asciiQR); // Optional to log the QR in the terminal
         var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
           response = {};
+  
         if (matches.length !== 3) {
-          throw new Error('Invalid input string');
+          return new Error('Invalid input string');
         }
         response.type = matches[1];
         response.data = new Buffer.from(matches[2], 'base64');
+  
         var imageBuffer = response;
-        // Salvar a nova imagem
-        sharp(imageBuffer['data'])
-        .resize({ width: 500, height: 500 }) // Altere o tamanho conforme necessário
-        .toBuffer()
-        .then(newImageBuffer => {
-            // Salvar a nova imagem
-            require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
-              if (err != null) {
-                  throw new Error("Erro ao salvar QR code: " + err);
-              } else {
-                  // Configurar o estilo CSS da página para definir a cor de fundo
-                  const htmlContent = `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                          <style>
-                              body {
-                                  background-color: white; /* Defina a cor de fundo desejada aqui */
-                              }
-                          </style>
-                      </head>
-                      <body>
-                          <img src="data:image/png;base64,${newImageBuffer.toString('base64')}">
-                      </body>
-                      </html>
-                  `;
+        require('fs').writeFile(
+          'out.png',
+          imageBuffer['data'],
+          'binary',
+          function (err) {
+            if (err != null) {
+              console.log(err);
+            }
+          }
+        );
+      },
+      logQR: false,
+      browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
 
-                  // Enviar a página HTML com a imagem para o cliente
-                  res.writeHead(200, {
-                      'Content-Type': 'text/html'
-                  });
-                  res.end(htmlContent);
-              }
-          });
-        })
-        .catch(err => {
-            console.error("Erro ao redimensionar a imagem: ", err);
-        });
-      }
+    }).then((res) =>{
+      console.log(res);
+    }).catch(err => {
+      console.error("Erro ao redimensionar a imagem: ", err);
     });
 
     // Iniciar a aplicação após a criação do cliente
-    await start(client);
+    //await start(client);
   } catch (error) {
     console.error("Erro ao criar a sessão do WhatsApp:", error);
     console.error("Stack Trace:", error.stack);
