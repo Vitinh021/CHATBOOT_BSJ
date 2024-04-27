@@ -39,18 +39,69 @@ app.get('/teste', async (req, res) => {
 app.get('/run', async (req, res) => {
   try {
     const client = await wppconnect.create({
-      session: 'sessionName',
+      session: "sessionName",
+      headless: 'new',
+      devtools: false,
+      useChrome: false,
+      debug: false,
       logQR: true,
-      browserArgs: ['--no-sandbox', '--disable-setuid-sandbox'], // Parâmetros a serem adicionados para a instância do navegador chrome
+      puppeteerOptions: puppeteerOptions,
+      disableWelcome: true,
+      updatesLog: false,
+      autoClose: false,
+      catchQR: (base64Qr, asciiQR) => {
+        console.log("QR code recebido");
+        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
+          response = {};
+        if (matches.length !== 3) {
+          throw new Error('Invalid input string');
+        }
+        response.type = matches[1];
+        response.data = new Buffer.from(matches[2], 'base64');
+        var imageBuffer = response;
+        // Salvar a nova imagem
+        sharp(imageBuffer['data'])
+        .resize({ width: 500, height: 500 }) // Altere o tamanho conforme necessário
+        .toBuffer()
+        .then(newImageBuffer => {
+            // Salvar a nova imagem
+            require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
+              if (err != null) {
+                  throw new Error("Erro ao salvar QR code: " + err);
+              } else {
+                  // Configurar o estilo CSS da página para definir a cor de fundo
+                  const htmlContent = `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                          <style>
+                              body {
+                                  background-color: white; /* Defina a cor de fundo desejada aqui */
+                              }
+                          </style>
+                      </head>
+                      <body>
+                          <img src="data:image/png;base64,${newImageBuffer.toString('base64')}">
+                      </body>
+                      </html>
+                  `;
 
-    }).then((res) =>{
-      console.log(res);
-    }).catch(err => {
-      console.error("Erro ao redimensionar a imagem: ", err);
+                  // Enviar a página HTML com a imagem para o cliente
+                  res.writeHead(200, {
+                      'Content-Type': 'text/html'
+                  });
+                  res.end(htmlContent);
+              }
+          });
+        })
+        .catch(err => {
+            console.error("Erro ao redimensionar a imagem: ", err);
+        });
+      }
     });
 
     // Iniciar a aplicação após a criação do cliente
-    //await start(client);
+    await start(client);
   } catch (error) {
     console.error("Erro ao criar a sessão do WhatsApp:", error);
     console.error("Stack Trace:", error.stack);
