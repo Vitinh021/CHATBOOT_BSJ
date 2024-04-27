@@ -48,7 +48,7 @@ app.get('/run', async (req, res) => {
       puppeteerOptions: puppeteerOptions,
       disableWelcome: true,
       updatesLog: false,
-      autoClose: 600000,
+      autoClose: 60000,
       catchQR: (base64Qr, asciiQR) => {
         console.log("QR code recebido");
         var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
