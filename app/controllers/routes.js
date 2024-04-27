@@ -14,7 +14,7 @@ const fs = require('fs');
 
 const app = express();
 const puppeteerOptions = {
-  headless: 'new', // Se false, o navegador será aberto em uma janela visível
+  headless: true, // Se false, o navegador será aberto em uma janela visível
   defaultViewport: null, // Permite configurar o tamanho da janela do navegador
   args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos adicionais para o Chrome/Chromium
   executablePath: '/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome' // Especifique o caminho do Chrome aqui
@@ -48,7 +48,7 @@ app.get('/run', async (req, res) => {
       puppeteerOptions: puppeteerOptions,
       disableWelcome: true,
       updatesLog: false,
-      autoClose: false,
+      autoClose: 600000,
       catchQR: (base64Qr, asciiQR) => {
         console.log("QR code recebido");
         var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
