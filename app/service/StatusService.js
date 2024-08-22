@@ -1,5 +1,4 @@
-const type = require('../controllers/types.js');
-const url = 'https://gestaobsj.com.br/Server/status.php';
+const type = require('../controllers/types');
 
 async function createStatus(phone){
   const agora = new Date();
@@ -17,12 +16,14 @@ async function createStatus(phone){
   formData.append('status', type.BEM_VINDO);
   formData.append('createStatus', true);
 
-  let options = {
+  const url = 'https://gestaobsj.com.br/Server/status.php';
+
+  const options = {
     method: 'POST',
     body: formData
   };
 
-  await fetch(url, options)
+  fetch(url, options)
     .then(response => {
       response.json().then(res =>{
         console.log(res)
@@ -36,7 +37,7 @@ async function createStatus(phone){
 //
 async function getByPhone(phone){
   let url = 'https://gestaobsj.com.br/Server/status.php?getByPhone=true&phone='+phone
-  return await fetch(url)
+  return fetch(url)
   .then(response => {
     if (!response.ok) {
       throw new Error('Network response was not ok.');
@@ -72,7 +73,9 @@ async function updateStatus(phone, status){
   formData.append('status', status);
   formData.append('updateStatus', true);
 
-  let options = {
+  const url = 'https://gestaobsj.com.br/Server/status.php';
+
+  const options = {
     method: 'POST',
     body: formData
   };

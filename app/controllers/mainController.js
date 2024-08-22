@@ -14,38 +14,16 @@ async function bemVindo(client, phone, nome){
 
 //imprime as datas disponiveis para escolher o horario em seguida
 function imprimirDatas(client, phone) {
-  /*let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
-  //var datasAnteriores = [];
-  var dataAtual = new Date();
-  var cont = 0
-
-  for (var i = 9; i >= 0; i--) {
-    cont++
-    var data = new Date();
-    data.setDate(dataAtual.getDate() - i);
-    var dia = data.getDate();
-    var mes = data.getMonth() + 1;
-    var ano = data.getFullYear();
-    dia = dia < 10 ? '0' + dia : dia;
-    mes = mes < 10 ? '0' + mes : mes;
-
-    text = text + '\n' + cont + ' - '+ dia + '/' + mes + '/' + ano
-  }  
-  
-  client.sendText(phone, text)*/
-  let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
+    let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
     
     const today = new Date();
     for (let i = 1; i < 11; i++) {
         const previousDate = new Date(today);
         previousDate.setDate(today.getDate() - i);
         const formattedDate = `${(previousDate.getDate() + 1).toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
-        if(/32/.test(formattedDate)){
-        	formattedDate = "01/" + (previousDate.getMonth() + 2).toString().padStart(2, '0') + "/" + (previousDate.getFullYear())       
-        }
         text = text + '\n' + i + ' - '+ formattedDate
     }
-    client.sendText(phone, text);
+    client.sendText(phone, text)
 }
 
 //inicia atendimento com o funcionario
@@ -68,10 +46,7 @@ function getData(opcao){
         let dia = (previousDate.getDate() + 1).toString().padStart(2, '0')
         let mes = (previousDate.getMonth() + 1).toString().padStart(2, '0')
         let ano = previousDate.getFullYear()
-        let formattedDate = `${ano}-${mes}-${dia}`;
-        if(/32/.test(formattedDate)){
-        	formattedDate = `${ano}-${(previousDate.getMonth() + 2).toString().padStart(2, '0')}-01`;
-        }
+        const formattedDate = `${ano}-${mes}-${dia}`;
         listaDatas.push(formattedDate)
     }
     return listaDatas[opcao-1]
