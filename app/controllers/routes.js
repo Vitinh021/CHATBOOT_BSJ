@@ -11,6 +11,68 @@ const axios = require('axios');
 require('dotenv').config();
 const fs = require('fs');
 
+// SINGLETON PATTERN: Armazena a instância global do cliente
+let globalClient = null;
+let isConnecting = false;
+let connectionAttempts = 0;
+const MAX_CONNECTION_ATTEMPTS = 3;
+const CONNECTION_TIMEOUT = 60000; // 60 segundos
+
+// Mapa para rastrear mensagens processadas recentemente (previne duplicação)
+const processedMessages = new Map();
+const MESSAGE_DEDUP_WINDOW = 5000; // 5 segundos
+
+// Limpa mensagens antigas do cache de deduplicação
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of processedMessages.entries()) {
+    if (now - timestamp > MESSAGE_DEDUP_WINDOW) {
+      processedMessages.delete(key);
+    }
+  }
+}, MESSAGE_DEDUP_WINDOW);
+
+// Função auxiliar para envio seguro de mensagens
+async function safeSendText(client, phone, text) {
+  try {
+    await client.sendText(phone, text);
+    return true;
+  } catch (error) {
+    console.error(`Erro ao enviar mensagem para ${phone}:`, error);
+    return false;
+  }
+}
+
+// Função para limpar o cliente de forma segura
+async function cleanupClient() {
+  if (globalClient) {
+    try {
+      console.log('Fechando cliente WhatsApp...');
+      await globalClient.close();
+      globalClient = null;
+      isConnecting = false;
+      console.log('Cliente fechado com sucesso');
+    } catch (error) {
+      console.error('Erro ao fechar cliente:', error);
+      globalClient = null;
+      isConnecting = false;
+    }
+  }
+}
+
+// Captura sinais de encerramento para limpeza adequada (importante para PM2)
+process.on('SIGINT', async () => {
+  console.log('Recebido SIGINT, encerrando graciosamente...');
+  await cleanupClient();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Recebido SIGTERM, encerrando graciosamente...');
+  await cleanupClient();
+  process.exit(0);
+});
+
 
 const app = express();
 const puppeteerOptions = {
@@ -37,19 +99,47 @@ app.get('/teste', async (req, res) => {
 
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
 app.get('/run', async (req, res) => {
+  // VERIFICAÇÃO SINGLETON: Previne criação de múltiplas instâncias
+  if (globalClient) {
+    console.log('Cliente já existe e está conectado');
+    return res.status(200).send('Cliente WhatsApp já está rodando');
+  }
+
+  if (isConnecting) {
+    console.log('Conexão já em andamento, aguarde...');
+    return res.status(409).send('Já existe uma tentativa de conexão em andamento. Aguarde.');
+  }
+
+  // Limita tentativas de reconexão
+  if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+    console.log('Máximo de tentativas de conexão atingido. Aguarde antes de tentar novamente.');
+    return res.status(429).send('Muitas tentativas de conexão. Aguarde alguns minutos.');
+  }
+
+  isConnecting = true;
+  connectionAttempts++;
+  
+  // Reset contador após timeout
+  setTimeout(() => {
+    connectionAttempts = 0;
+  }, 300000); // 5 minutos
+
   try {
-    const client = await wppconnect.create({
-      session: "sessionName",
-      headless: 'new',
-      devtools: false,
-      useChrome: false,
-      debug: false,
-      logQR: true,
-      puppeteerOptions: puppeteerOptions,
-      disableWelcome: true,
-      updatesLog: false,
-      autoClose: 60000,
-      catchQR: (base64Qr, asciiQR) => {
+    console.log(`Iniciando nova sessão WhatsApp (tentativa ${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
+    
+    const client = await Promise.race([
+      wppconnect.create({
+        session: "sessionName",
+        headless: 'new',
+        devtools: false,
+        useChrome: false,
+        debug: false,
+        logQR: true,
+        puppeteerOptions: puppeteerOptions,
+        disableWelcome: true,
+        updatesLog: false,
+        autoClose: 0, // Desabilita auto-close para evitar desconexões inesperadas
+        catchQR: (base64Qr, asciiQR) => {
         console.log("QR code recebido");
         var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
           response = {};
@@ -97,20 +187,74 @@ app.get('/run', async (req, res) => {
         .catch(err => {
             console.error("Erro ao redimensionar a imagem: ", err);
         });
+        }
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na criação do cliente')), CONNECTION_TIMEOUT)
+      )
+    ]);
+
+    // Armazena cliente globalmente
+    globalClient = client;
+    isConnecting = false;
+    connectionAttempts = 0; // Reset em caso de sucesso
+    
+    console.log('Cliente WhatsApp criado com sucesso');
+
+    // Monitora desconexões
+    client.onStateChange((state) => {
+      console.log('Estado da conexão:', state);
+      if (state === 'CONFLICT' || state === 'UNLAUNCHED') {
+        console.log('Detectada desconexão, limpando cliente...');
+        globalClient = null;
       }
     });
 
     // Iniciar a aplicação após a criação do cliente
     await start(client);
+    
+    res.status(200).send('Cliente WhatsApp iniciado com sucesso');
   } catch (error) {
     console.error("Erro ao criar a sessão do WhatsApp:", error);
     console.error("Stack Trace:", error.stack);
-    res.status(500).send("Erro ao criar a sessão do WhatsApp: " + JSON.stringify(error.stack));
+    
+    // Limpa estado em caso de erro
+    isConnecting = false;
+    globalClient = null;
+    
+    // Se for erro de browser já rodando, tenta limpar
+    if (error.message && error.message.includes('browser is already running')) {
+      console.log('Detectado erro de browser duplicado. Considere reiniciar o PM2.');
+      res.status(500).send('Erro: Browser já em execução. Execute: pm2 restart chatboot');
+    } else {
+      res.status(500).send("Erro ao criar a sessão do WhatsApp: " + error.message);
+    }
   }
 });
 app.get('/env', (req, res) => {
   res.status(200).send(process.cwd())
 })
+
+// Novo endpoint para verificar status da conexão
+app.get('/status', (req, res) => {
+  const status = {
+    connected: globalClient !== null,
+    connecting: isConnecting,
+    connectionAttempts: connectionAttempts,
+    uptime: process.uptime()
+  };
+  res.status(200).json(status);
+})
+
+// Novo endpoint para forçar desconexão (use com cuidado)
+app.get('/disconnect', async (req, res) => {
+  if (!globalClient) {
+    return res.status(200).send('Nenhum cliente conectado');
+  }
+  await cleanupClient();
+  res.status(200).send('Cliente desconectado com sucesso');
+})
+
 app.get('/qrcode', (req, res) => {
   fs.readFile('out.png', function (error, data) {
     if (error) {
@@ -129,7 +273,16 @@ function start(client) {
 
   let dataEscolhida = null
 
-  client.onMessage(async (message) => {    
+  client.onMessage(async (message) => {
+    try {
+      // DEDUPLICAÇÃO: Previne processamento de mensagens duplicadas
+      const messageKey = `${message.from}_${message.id}_${message.timestamp}`;
+      if (processedMessages.has(messageKey)) {
+        console.log('Mensagem duplicada ignorada:', messageKey);
+        return;
+      }
+      processedMessages.set(messageKey, Date.now());
+
       const telefoneAtendente=process.env.TELEFONE_ATENDENTE;
       var chatId = message.chatId;
       var phone = message.from;
@@ -143,28 +296,41 @@ function start(client) {
       // Escreve os dados JSON no arquivo
       //await fs.writeFileSync(arquivo, jsonString);
     if (phone != 'status@broadcast') {
-      await service.getByPhone(phone)
-        .then((data)=>{
-          if (data){//se existir
-            status = data.status;
-            id_cliente_banco = data.id;
-            var dataServer = new Date(data.data_hora);
-            var dataAtual = new Date();
-            var diferenca_tempo = 10 * 60 * 1000; // 10 minutos em milissegundos
-            if (dataAtual - dataServer >= diferenca_tempo) {
-                service.updateStatus(phone,type.BEM_VINDO)
-                status = type.BEM_VINDO
-            } 
-          }else{
-            service.createStatus(phone)
-            status = type.BEM_VINDO
-          }
-        })
+      // Adiciona tratamento de erro para chamadas de serviço
+      try {
+        await service.getByPhone(phone)
+          .then((data)=>{
+            if (data){//se existir
+              status = data.status;
+              id_cliente_banco = data.id;
+              var dataServer = new Date(data.data_hora);
+              var dataAtual = new Date();
+              var diferenca_tempo = 10 * 60 * 1000; // 10 minutos em milissegundos
+              if (dataAtual - dataServer >= diferenca_tempo) {
+                  service.updateStatus(phone,type.BEM_VINDO)
+                  status = type.BEM_VINDO
+              } 
+            }else{
+              service.createStatus(phone)
+              status = type.BEM_VINDO
+            }
+          })
+          .catch((error) => {
+            console.error('Erro ao buscar status do cliente:', error);
+            // Define status padrão em caso de erro
+            status = type.BEM_VINDO;
+          });
+      } catch (error) {
+        console.error('Erro na busca de status:', error);
+        status = type.BEM_VINDO;
+      }
 
         let opcaoNumero = parseInt(message.body)
         if (telefoneAtendente == phone) {
           if (!isNaN(message.body) && Number.isInteger(parseInt(message.body))) {
-            service.updateStatus(message.body,type.BEM_VINDO)
+            service.updateStatus(message.body,type.BEM_VINDO).catch(err => 
+              console.error('Erro ao atualizar status:', err)
+            );
           }
         }
 
@@ -181,7 +347,7 @@ function start(client) {
         else if(status == type.ESCOLHA_ATENDIMENTO && message.body == '2'){
           //558799069152@c.us
           var tel = `(${phone.substring(2, 4)}) 9${phone.substring(4, 8)}-${phone.substring(8, 12)}`;
-          client.sendText(telefoneAtendente, `O cliente ${nome}, de número *${tel}* e código *${id_cliente_banco}* está aguardando por atendimento!`)
+          await safeSendText(client, telefoneAtendente, `O cliente ${nome}, de número *${tel}* e código *${id_cliente_banco}* está aguardando por atendimento!`)
           service.updateStatus(phone,type.ATENDIMENTO_FUNCIONARIO)
           controller.iniciaAtendimento(client, phone)
         }
@@ -208,13 +374,13 @@ function start(client) {
                       console.log("-----------------------------------------------------------------------")
                       console.log(obj)
                     });
-                    await client.sendText(phone, mensagem_grande)
+                    await safeSendText(client, phone, mensagem_grande)
                   }else{
-                    await client.sendText(phone, controller.mensagemResultado(data))
+                    await safeSendText(client, phone, controller.mensagemResultado(data))
                   }
 
                   service.updateStatus(phone,type.CONFIRMACAO_NOVO_ATENDIMENTO)
-                  client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
+                  await safeSendText(client, phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
                 }
                 else{
                   throw new Error("Opção inválida! A opcao vai até 10.")
@@ -222,7 +388,7 @@ function start(client) {
               })
 
               .catch(error => {
-                client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+                safeSendText(client, message.from, "Opção inválida! Verifique novamente as opções a cima.")
                 console.error('Erro ao obter dados:', error.message);
               })
             })
@@ -239,11 +405,21 @@ function start(client) {
         }
         
         else if(status != type.ATENDIMENTO_FUNCIONARIO){
-          client.sendText(message.from, "Opção inválida! Verifique novamente as opções a cima.")
+          await safeSendText(client, message.from, "Opção inválida! Verifique novamente as opções a cima.")
         }
     }
     else {
       console.log("broadcast");
+    }
+    } catch (error) {
+      // TRATAMENTO DE ERRO: Previne que erros em mensagens individuais derrubem o bot
+      console.error('Erro ao processar mensagem:', error);
+      console.error('Mensagem que causou o erro:', message);
+      try {
+        await safeSendText(client, message.from, "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.");
+      } catch (sendError) {
+        console.error('Erro ao enviar mensagem de erro:', sendError);
+      }
     }
   }); 
 }

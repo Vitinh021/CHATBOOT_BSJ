@@ -1,13 +1,24 @@
 const service = require('../service/StatusService.js');
 const type = require('./types.js');
 
+// Função auxiliar para envio seguro de mensagens
+async function safeSendText(client, phone, text) {
+  try {
+    await client.sendText(phone, text);
+    return true;
+  } catch (error) {
+    console.error(`Erro ao enviar mensagem para ${phone}:`, error);
+    return false;
+  }
+}
+
 //Mensage de boas vindas 
 async function bemVindo(client, phone, nome){
-  await client.sendText(phone,
+  await safeSendText(client, phone,
     `Olá, ${nome}. BANCA SÃO JOSÉ agradece seu contato.\n\nDigite *1* para acessar as datas das extrações;\nDigite *2* para conversar com um de nossos atendentes.`
   )
 
-  client.sendText(phone,
+  await safeSendText(client, phone,
     `Caso queira encerrar o atendimento, *DIGITE 0* a qualquer momento... `
   )
 }
@@ -23,14 +34,14 @@ function imprimirDatas(client, phone) {
         const formattedDate = `${(previousDate.getDate()).toString().padStart(2, '0')}/${(previousDate.getMonth() + 1).toString().padStart(2, '0')}/${previousDate.getFullYear()}`;
         text = text + '\n' + (i+1) + ' - '+ formattedDate
     }
-    client.sendText(phone, text)
+    safeSendText(client, phone, text)
 }
 
 //inicia atendimento com o funcionario
 async function iniciaAtendimento(client, phone){
-  await client.sendText(phone, 'Você agora está conversando com um atendente.\nFaça seu pedido!')
+  await safeSendText(client, phone, 'Você agora está conversando com um atendente.\nFaça seu pedido!')
 
-  client.sendText(phone,
+  await safeSendText(client, phone,
     `Caso queira encerrar o atendimento, *DIGITE 0* a qualquer momento... `
   )
 }
@@ -80,11 +91,11 @@ async function imprimirHorario(client, phone, dataEscolhida, isMensagem = true){
     if (isMensagem == true){
       //data.horarios.length=0;
       if(data.horarios.length==0){
-        await client.sendText(phone, "Ainda não foram registradas extrações hoje!\nA primeira extração estará disponível após às 09:45.")
+        await safeSendText(client, phone, "Ainda não foram registradas extrações hoje!\nA primeira extração estará disponível após às 09:45.")
         service.updateStatus(phone,type.CONFIRMACAO_NOVO_ATENDIMENTO)
-        client.sendText(phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
+        await safeSendText(client, phone, 'Digite *1* para solicitar um novo resultado;\nDigite *2* para finalizar o atendimento.')
       } else{
-        client.sendText(phone, mensagem)
+        await safeSendText(client, phone, mensagem)
       }
       
     }else{
@@ -167,7 +178,7 @@ function mensagemResultado(obj) {
 }
 
 function finalizarAtendimento(client, phone){
-    client.sendText(phone, "FICAMOS FELIZES EM ATENDÊ-LO,\nAGRADECEMOS A PREFERÊNCIA. 😃")
+    safeSendText(client, phone, "FICAMOS FELIZES EM ATENDÊ-LO,\nAGRADECEMOS A PREFERÊNCIA. 😃")
 }
 
 //exporta funções
