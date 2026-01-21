@@ -11,6 +11,12 @@ const axios = require('axios');
 require('dotenv').config();
 const fs = require('fs');
 
+const SESSION_NAME = process.env.WPP_SESSION || 'sessionName';
+const AUTO_START = (process.env.WPP_AUTOSTART || 'true').toLowerCase() !== 'false';
+const TOKENS_DIR = process.env.WPP_TOKENS_DIR || path.join(process.cwd(), 'tokens');
+
+let lastQrAt = null;
+
 // SINGLETON PATTERN: Armazena a instância global do cliente
 let globalClient = null;
 let isConnecting = false;
@@ -48,7 +54,15 @@ async function cleanupClient() {
   if (globalClient) {
     try {
       console.log('Fechando cliente WhatsApp...');
-      await globalClient.close();
+      if (typeof globalClient.close === 'function') {
+        await globalClient.close();
+      }
+      if (typeof globalClient.logout === 'function') {
+        await globalClient.logout();
+      }
+      if (typeof globalClient.kill === 'function') {
+        await globalClient.kill();
+      }
       globalClient = null;
       isConnecting = false;
       console.log('Cliente fechado com sucesso');
@@ -57,6 +71,165 @@ async function cleanupClient() {
       globalClient = null;
       isConnecting = false;
     }
+  }
+}
+
+function sessionProbablyExists() {
+  try {
+    // Padrões comuns do wppconnect: tokens/<session>, tokens/<session>.data.json
+    const candidates = [
+      path.join(TOKENS_DIR, SESSION_NAME),
+      path.join(TOKENS_DIR, `${SESSION_NAME}.data.json`),
+      path.join(process.cwd(), 'tokens', SESSION_NAME),
+      path.join(process.cwd(), 'tokens', `${SESSION_NAME}.data.json`),
+    ];
+    return candidates.some((p) => fs.existsSync(p));
+  } catch {
+    return false;
+  }
+}
+
+function renderQrPage() {
+  // Página simples que atualiza o QR e mostra status
+  return `<!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>WhatsApp QR</title>
+      <style>
+        body { font-family: Arial, sans-serif; background:#fff; margin: 24px; }
+        .row { display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+        img { width: 360px; height: 360px; object-fit: contain; border:1px solid #ddd; }
+        pre { background:#f7f7f7; padding:12px; border:1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <h2>Conectando ao WhatsApp...</h2>
+      <p>Se houver sessão salva, o bot conecta sozinho. Se não houver, escaneie o QR abaixo.</p>
+      <div class="row">
+        <div>
+          <img id="qr" src="/qrcode?ts=${Date.now()}" alt="QR code" />
+          <div><small>Atualiza a cada 2s</small></div>
+        </div>
+        <div>
+          <h3>Status</h3>
+          <pre id="status">carregando...</pre>
+        </div>
+      </div>
+      <script>
+        function refreshQr(){
+          const img = document.getElementById('qr');
+          img.src = '/qrcode?ts=' + Date.now();
+        }
+        async function refreshStatus(){
+          try {
+            const r = await fetch('/status');
+            const j = await r.json();
+            document.getElementById('status').textContent = JSON.stringify(j, null, 2);
+          } catch (e) {
+            document.getElementById('status').textContent = String(e);
+          }
+        }
+        setInterval(refreshQr, 2000);
+        setInterval(refreshStatus, 2000);
+        refreshStatus();
+      </script>
+    </body>
+  </html>`;
+}
+
+async function connectWhatsapp({ interactive }) {
+  // VERIFICAÇÃO SINGLETON
+  if (globalClient) {
+    return globalClient;
+  }
+  if (isConnecting) {
+    throw new Error('Conexão já em andamento');
+  }
+
+  // Se não for interativo, só tenta se houver sessão salva
+  if (!interactive && !sessionProbablyExists()) {
+    throw new Error('Sem sessão salva; auto-start ignorado');
+  }
+
+  // Limita tentativas de reconexão
+  if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+    throw new Error('Muitas tentativas de conexão em andamento');
+  }
+
+  isConnecting = true;
+  connectionAttempts++;
+
+  // Reset contador após timeout
+  setTimeout(() => {
+    connectionAttempts = 0;
+  }, 300000); // 5 minutos
+
+  try {
+    console.log(`Iniciando sessão WhatsApp (${SESSION_NAME})...`);
+
+    const client = await Promise.race([
+      wppconnect.create({
+        session: SESSION_NAME,
+        headless: 'new',
+        devtools: false,
+        useChrome: false,
+        debug: false,
+        logQR: true,
+        puppeteerOptions: puppeteerOptions,
+        disableWelcome: true,
+        updatesLog: false,
+        autoClose: 0,
+        catchQR: (base64Qr) => {
+          // Em boot/restart não existe request HTTP pra responder.
+          // A UI/monitoramento pode puxar /qrcode.
+          try {
+            lastQrAt = new Date();
+            const matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (!matches || matches.length !== 3) return;
+
+            const imageBuffer = Buffer.from(matches[2], 'base64');
+            sharp(imageBuffer)
+              .resize({ width: 500, height: 500 })
+              .toBuffer()
+              .then((newImageBuffer) => {
+                fs.writeFile('out.png', newImageBuffer, 'binary', function (err) {
+                  if (err) console.error('Erro ao salvar QR code:', err);
+                });
+              })
+              .catch((err) => console.error('Erro ao processar QR:', err));
+          } catch (err) {
+            console.error('Erro no catchQR:', err);
+          }
+        },
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout na criação do cliente')), CONNECTION_TIMEOUT)
+      ),
+    ]);
+
+    globalClient = client;
+    isConnecting = false;
+    connectionAttempts = 0;
+
+    console.log('Cliente WhatsApp criado com sucesso');
+
+    client.onStateChange((state) => {
+      console.log('Estado da conexão:', state);
+      if (state === 'CONFLICT' || state === 'UNLAUNCHED') {
+        console.log('Detectada desconexão, limpando cliente...');
+        globalClient = null;
+      }
+    });
+
+    await start(client);
+    return client;
+  } catch (error) {
+    isConnecting = false;
+    globalClient = null;
+    console.error('Falha ao iniciar WhatsApp:', error);
+    throw error;
   }
 }
 
@@ -99,136 +272,23 @@ app.get('/teste', async (req, res) => {
 
 // Inicia o cliente wppconnect quando o servidor Node.js é iniciado
 app.get('/run', async (req, res) => {
-  // VERIFICAÇÃO SINGLETON: Previne criação de múltiplas instâncias
-  if (globalClient) {
-    console.log('Cliente já existe e está conectado');
-    return res.status(200).send('Cliente WhatsApp já está rodando');
-  }
-
-  if (isConnecting) {
-    console.log('Conexão já em andamento, aguarde...');
-    return res.status(409).send('Já existe uma tentativa de conexão em andamento. Aguarde.');
-  }
-
-  // Limita tentativas de reconexão
-  if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
-    console.log('Máximo de tentativas de conexão atingido. Aguarde antes de tentar novamente.');
-    return res.status(429).send('Muitas tentativas de conexão. Aguarde alguns minutos.');
-  }
-
-  isConnecting = true;
-  connectionAttempts++;
-  
-  // Reset contador após timeout
-  setTimeout(() => {
-    connectionAttempts = 0;
-  }, 300000); // 5 minutos
-
   try {
-    console.log(`Iniciando nova sessão WhatsApp (tentativa ${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
-    
-    const client = await Promise.race([
-      wppconnect.create({
-        session: "sessionName",
-        headless: 'new',
-        devtools: false,
-        useChrome: false,
-        debug: false,
-        logQR: true,
-        puppeteerOptions: puppeteerOptions,
-        disableWelcome: true,
-        updatesLog: false,
-        autoClose: 0, // Desabilita auto-close para evitar desconexões inesperadas
-        catchQR: (base64Qr, asciiQR) => {
-        console.log("QR code recebido");
-        var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
-          response = {};
-        if (matches.length !== 3) {
-          throw new Error('Invalid input string');
-        }
-        response.type = matches[1];
-        response.data = new Buffer.from(matches[2], 'base64');
-        var imageBuffer = response;
-        // Salvar a nova imagem
-        sharp(imageBuffer['data'])
-        .resize({ width: 500, height: 500 }) // Altere o tamanho conforme necessário
-        .toBuffer()
-        .then(newImageBuffer => {
-            // Salvar a nova imagem
-            require('fs').writeFile('out.png', newImageBuffer, 'binary', function (err) {
-              if (err != null) {
-                  throw new Error("Erro ao salvar QR code: " + err);
-              } else {
-                  // Configurar o estilo CSS da página para definir a cor de fundo
-                  const htmlContent = `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                          <style>
-                              body {
-                                  background-color: white; /* Defina a cor de fundo desejada aqui */
-                              }
-                          </style>
-                      </head>
-                      <body>
-                          <img src="data:image/png;base64,${newImageBuffer.toString('base64')}">
-                      </body>
-                      </html>
-                  `;
-
-                  // Enviar a página HTML com a imagem para o cliente
-                  res.writeHead(200, {
-                      'Content-Type': 'text/html'
-                  });
-                  res.end(htmlContent);
-              }
-          });
-        })
-        .catch(err => {
-            console.error("Erro ao redimensionar a imagem: ", err);
-        });
-        }
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout na criação do cliente')), CONNECTION_TIMEOUT)
-      )
-    ]);
-
-    // Armazena cliente globalmente
-    globalClient = client;
-    isConnecting = false;
-    connectionAttempts = 0; // Reset em caso de sucesso
-    
-    console.log('Cliente WhatsApp criado com sucesso');
-
-    // Monitora desconexões
-    client.onStateChange((state) => {
-      console.log('Estado da conexão:', state);
-      if (state === 'CONFLICT' || state === 'UNLAUNCHED') {
-        console.log('Detectada desconexão, limpando cliente...');
-        globalClient = null;
-      }
-    });
-
-    // Iniciar a aplicação após a criação do cliente
-    await start(client);
-    
-    res.status(200).send('Cliente WhatsApp iniciado com sucesso');
-  } catch (error) {
-    console.error("Erro ao criar a sessão do WhatsApp:", error);
-    console.error("Stack Trace:", error.stack);
-    
-    // Limpa estado em caso de erro
-    isConnecting = false;
-    globalClient = null;
-    
-    // Se for erro de browser já rodando, tenta limpar
-    if (error.message && error.message.includes('browser is already running')) {
-      console.log('Detectado erro de browser duplicado. Considere reiniciar o PM2.');
-      res.status(500).send('Erro: Browser já em execução. Execute: pm2 restart chatboot');
-    } else {
-      res.status(500).send("Erro ao criar a sessão do WhatsApp: " + error.message);
+    if (globalClient) {
+      return res.status(200).send('Cliente WhatsApp já está rodando');
     }
+    if (isConnecting) {
+      return res.status(409).send('Já existe uma tentativa de conexão em andamento. Aguarde.');
+    }
+
+    // Responde imediatamente com uma página que mostra QR + status.
+    // A conexão acontece em background.
+    res.status(200).send(renderQrPage());
+    connectWhatsapp({ interactive: true }).catch((err) => {
+      console.error('Falha ao conectar via /run:', err);
+    });
+  } catch (error) {
+    console.error("Erro ao iniciar via /run:", error);
+    res.status(500).send("Erro ao iniciar WhatsApp: " + error.message);
   }
 });
 app.get('/env', (req, res) => {
@@ -241,7 +301,8 @@ app.get('/status', (req, res) => {
     connected: globalClient !== null,
     connecting: isConnecting,
     connectionAttempts: connectionAttempts,
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    lastQrAt
   };
   res.status(200).json(status);
 })
@@ -425,3 +486,19 @@ function start(client) {
 }
 
 module.exports = app;
+
+// Auto-start no boot (PM2 restart) somente se existir sessão salva.
+setImmediate(() => {
+  if (!AUTO_START) {
+    console.log('WPP_AUTOSTART=false; auto-start desabilitado');
+    return;
+  }
+  if (!sessionProbablyExists()) {
+    console.log('Nenhuma sessão salva encontrada; aguardando /run para gerar QR');
+    return;
+  }
+  console.log('Sessão salva encontrada; conectando automaticamente...');
+  connectWhatsapp({ interactive: false }).catch((err) => {
+    console.error('Auto-start falhou:', err.message || err);
+  });
+});
