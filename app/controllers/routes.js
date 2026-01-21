@@ -18,6 +18,9 @@ let connectionAttempts = 0;
 const MAX_CONNECTION_ATTEMPTS = 3;
 const CONNECTION_TIMEOUT = 60000; // 60 segundos
 
+// Último QR gerado (para observabilidade via /status e /qrcode)
+let lastQrAt = null;
+
 // Mapa para rastrear mensagens processadas recentemente (previne duplicação)
 const processedMessages = new Map();
 const MESSAGE_DEDUP_WINDOW = 5000; // 5 segundos
@@ -48,7 +51,16 @@ async function cleanupClient() {
   if (globalClient) {
     try {
       console.log('Fechando cliente WhatsApp...');
-      await globalClient.close();
+      // wppconnect pode expor close/logout/kill dependendo da versão
+      if (typeof globalClient.close === 'function') {
+        await globalClient.close();
+      }
+      if (typeof globalClient.logout === 'function') {
+        await globalClient.logout();
+      }
+      if (typeof globalClient.kill === 'function') {
+        await globalClient.kill();
+      }
       globalClient = null;
       isConnecting = false;
       console.log('Cliente fechado com sucesso');
@@ -71,6 +83,20 @@ process.on('SIGTERM', async () => {
   console.log('Recebido SIGTERM, encerrando graciosamente...');
   await cleanupClient();
   process.exit(0);
+});
+
+process.on('unhandledRejection', async (reason) => {
+  console.error('unhandledRejection:', reason);
+});
+
+process.on('uncaughtException', async (err) => {
+  console.error('uncaughtException:', err);
+  // Em caso de crash, tenta fechar o cliente antes de sair
+  try {
+    await cleanupClient();
+  } finally {
+    process.exit(1);
+  }
 });
 
 
@@ -126,9 +152,11 @@ app.get('/run', async (req, res) => {
 
   try {
     console.log(`Iniciando nova sessão WhatsApp (tentativa ${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
-    
-    const client = await Promise.race([
-      wppconnect.create({
+
+    // Importante: se houver timeout, o create() pode continuar em background.
+    // Para evitar Chrome órfão consumindo RAM, fechamos o client assim que ele resolver.
+    let didTimeout = false;
+    const createPromise = wppconnect.create({
         session: "sessionName",
         headless: 'new',
         devtools: false,
@@ -141,6 +169,7 @@ app.get('/run', async (req, res) => {
         autoClose: 0, // Desabilita auto-close para evitar desconexões inesperadas
         catchQR: (base64Qr, asciiQR) => {
         console.log("QR code recebido");
+        lastQrAt = new Date();
         var matches = base64Qr.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/),
           response = {};
         if (matches.length !== 3) {
@@ -159,28 +188,9 @@ app.get('/run', async (req, res) => {
               if (err != null) {
                   throw new Error("Erro ao salvar QR code: " + err);
               } else {
-                  // Configurar o estilo CSS da página para definir a cor de fundo
-                  const htmlContent = `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                          <style>
-                              body {
-                                  background-color: white; /* Defina a cor de fundo desejada aqui */
-                              }
-                          </style>
-                      </head>
-                      <body>
-                          <img src="data:image/png;base64,${newImageBuffer.toString('base64')}">
-                      </body>
-                      </html>
-                  `;
-
-                  // Enviar a página HTML com a imagem para o cliente
-                  res.writeHead(200, {
-                      'Content-Type': 'text/html'
-                  });
-                  res.end(htmlContent);
+                  // Não responda o HTTP daqui: isso causa "headers already sent" e pode derrubar o processo.
+                  // Para exibir o QR, use o endpoint /qrcode.
+                  console.log('QR code salvo em out.png');
               }
           });
         })
@@ -188,11 +198,34 @@ app.get('/run', async (req, res) => {
             console.error("Erro ao redimensionar a imagem: ", err);
         });
         }
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout na criação do cliente')), CONNECTION_TIMEOUT)
+
+      });
+
+    const client = await Promise.race([
+      createPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => {
+          didTimeout = true;
+          reject(new Error('Timeout na criação do cliente'));
+        }, CONNECTION_TIMEOUT)
       )
     ]);
+
+    // Se o createPromise finalizar após timeout, fecha imediatamente para não deixar Chrome órfão.
+    createPromise
+      .then(async (lateClient) => {
+        if (!didTimeout) return;
+        try {
+          console.warn('create() resolveu após timeout; fechando instância atrasada para evitar leak.');
+          if (typeof lateClient.close === 'function') await lateClient.close();
+          if (typeof lateClient.kill === 'function') await lateClient.kill();
+        } catch (e) {
+          console.error('Falha ao fechar instância atrasada:', e);
+        }
+      })
+      .catch(() => {
+        // Ignora: o erro já será tratado no fluxo principal
+      });
 
     // Armazena cliente globalmente
     globalClient = client;
@@ -204,9 +237,18 @@ app.get('/run', async (req, res) => {
     // Monitora desconexões
     client.onStateChange((state) => {
       console.log('Estado da conexão:', state);
-      if (state === 'CONFLICT' || state === 'UNLAUNCHED') {
-        console.log('Detectada desconexão, limpando cliente...');
-        globalClient = null;
+      // IMPORTANTE: não basta zerar a variável; é preciso fechar a instância (senão Chrome fica rodando).
+      const disconnectedStates = new Set([
+        'CONFLICT',
+        'UNLAUNCHED',
+        'DISCONNECTED',
+        'UNPAIRED',
+        'UNPAIRED_IDLE',
+        'PAIRING',
+      ]);
+      if (disconnectedStates.has(state)) {
+        console.log('Detectada desconexão/estado inválido; executando cleanup...');
+        cleanupClient().catch((err) => console.error('Erro no cleanup após desconexão:', err));
       }
     });
 
@@ -241,7 +283,10 @@ app.get('/status', (req, res) => {
     connected: globalClient !== null,
     connecting: isConnecting,
     connectionAttempts: connectionAttempts,
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    processedMessagesCacheSize: processedMessages.size,
+    lastQrAt
   };
   res.status(200).json(status);
 })
@@ -415,11 +460,6 @@ function start(client) {
       // TRATAMENTO DE ERRO: Previne que erros em mensagens individuais derrubem o bot
       console.error('Erro ao processar mensagem:', error);
       console.error('Mensagem que causou o erro:', message);
-      try {
-        await safeSendText(client, message.from, "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.");
-      } catch (sendError) {
-        console.error('Erro ao enviar mensagem de erro:', sendError);
-      }
     }
   }); 
 }
