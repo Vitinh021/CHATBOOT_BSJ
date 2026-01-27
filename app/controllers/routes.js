@@ -476,11 +476,6 @@ function start(client) {
       // TRATAMENTO DE ERRO: Previne que erros em mensagens individuais derrubem o bot
       console.error('Erro ao processar mensagem:', error);
       console.error('Mensagem que causou o erro:', message);
-      try {
-        await safeSendText(client, message.from, "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.");
-      } catch (sendError) {
-        console.error('Erro ao enviar mensagem de erro:', sendError);
-      }
     }
   }); 
 }
