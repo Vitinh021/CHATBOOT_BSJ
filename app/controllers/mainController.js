@@ -25,7 +25,7 @@ async function bemVindo(client, phone, nome){
 
 //imprime as datas disponiveis para escolher o horario em seguida
 function imprimirDatas(client, phone) {
-    let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione uma data:*\n'
+    let text = 'Para saber o resultado 👇🏻👇🏻\n*Selecione o número ao lado da data que deseja saber o resultado:*\n'
     
     const today = new Date();
     for (let i = 0; i < 10; i++) {
@@ -67,7 +67,7 @@ function getData(opcao){
 //retorna o horario escolhido
 async function imprimirHorario(client, phone, dataEscolhida, isMensagem = true){
   //validar se o dia é quarta ou sabado para poder mostra o horario da federal
-  let mensagem = 'Certo, agora *selecione um horario*\n🍀BOA SORTE🍀\n'
+  let mensagem = 'Legal, agora *selecione o número ao lado do horário que deseja*\n🍀BOA SORTE🍀\n'
   let url = `https://gestaobsj.com.br/Server/Extracao.php?getHorariosByDate=true&data_extracao=${dataEscolhida}`
   try {
     const response = await fetch(url);
